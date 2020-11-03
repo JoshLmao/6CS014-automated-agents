@@ -4,13 +4,29 @@ using System;
 
 public class Part1_SceneController : AStarSceneController
 {
+    /// <summary>
+    /// Start waypoint for the single truck to start from
+    /// </summary>
     public GameObject StartWaypoint = null;
+    /// <summary>
+    /// End waypoint for the single truck to deliver to
+    /// </summary>
     public GameObject DeliveryDestination = null;
-
+    /// <summary>
+    /// The GameObject containing the Truck component
+    /// </summary>
     public GameObject TruckObject = null;
 
+    /// <summary>
+    /// Truck component on the TruckObject
+    /// </summary>
     private Truck m_truck;
-    
+
+    private bool m_returningToDepot = false;
+
+    /// <summary>
+    /// Amunt of seconds a truck will wait before 'completing' a delivery
+    /// </summary>
     private const float WAIT_SECONDS = 3f;
 
     protected override void Start()
@@ -38,10 +54,9 @@ public class Part1_SceneController : AStarSceneController
             m_truck = TruckObject.GetComponent<Truck>();
             if (m_truck)
             {
-                m_truck.DriveAlong(m_destinationPath);
-
-                m_truck.OnReachedPathStart += OnReachedStartPath;
                 m_truck.OnReachedPathEnd += OnReachedEndPath;
+                
+                m_truck.DriveAlong(m_destinationPath);
             }
         }
         else
@@ -51,24 +66,33 @@ public class Part1_SceneController : AStarSceneController
         }
     }
 
-    void OnReachedStartPath()
-    {
-        // Reached start position. Completed delivery, stop.
-    }
-
     void OnReachedEndPath()
     {
-        // Reached delivery drop off location, wait and then return to start position
-        StartCoroutine(WaitNavigate(WAIT_SECONDS, DeliveryDestination, StartWaypoint));
+        if (m_returningToDepot)
+        {
+            // Returned home to depot. Finished.
+            Debug.Log("Returned home to Depot");
+        }
+        else
+        {
+            // Reached delivery drop off location, wait and then return to start position
+            StartCoroutine(WaitNavigate(WAIT_SECONDS, DeliveryDestination, StartWaypoint));
 
-        // Drop off package
-        m_truck.DeliverPackage();
+            // Drop off package
+            m_truck.DeliverPackage();
+
+            // Truck will be going to Depot next
+            m_returningToDepot = true;
+
+            Debug.Log("Reached destination. Delivering and then returning to Depot");
+        }
     }
 
     private IEnumerator WaitNavigate(float seconds, GameObject start, GameObject end)
     {
         yield return new WaitForSeconds(seconds);
 
+        // Determine and set a new drive path for Truck
         this.Navigate(start, end);
         m_truck.DriveAlong(m_destinationPath);
     }

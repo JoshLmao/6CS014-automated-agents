@@ -10,10 +10,6 @@ public class Truck : MonoBehaviour
     public float Speed = 1.0f;
 
     /// <summary>
-    /// Event for when truck reaches it's start destination after returning
-    /// </summary>
-    public event Action OnReachedPathStart;
-    /// <summary>
     /// Event for when truck reached it's end destination
     /// </summary>
     public event Action OnReachedPathEnd;
@@ -75,7 +71,7 @@ public class Truck : MonoBehaviour
                 }
                 else
                 {
-                    Debug.LogError("TargetNodeIndex is out of bounds!");
+                    //Debug.LogError("TargetNodeIndex is out of bounds!");
                 }
             }
             

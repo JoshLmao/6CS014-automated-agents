@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class Truck : MonoBehaviour
@@ -8,6 +9,18 @@ public class Truck : MonoBehaviour
     /// </summary>
     public float Speed = 1.0f;
 
+    /// <summary>
+    /// Event for when truck reaches it's start destination after returning
+    /// </summary>
+    public event Action OnReachedPathStart;
+    /// <summary>
+    /// Event for when truck reached it's end destination
+    /// </summary>
+    public event Action OnReachedPathEnd;
+
+    /// <summary>
+    /// Current path for the truck to drive along
+    /// </summary>
     private List<Connection> m_connectionDrivePath = null;
 
     /// <summary>
@@ -18,8 +31,17 @@ public class Truck : MonoBehaviour
     [SerializeField]
     private Vector3 ModelRotationOffset = Vector3.zero;
 
+    /// <summary>
+    /// Current target node to move toward
+    /// </summary>
     private GameObject m_currentTargetNode = null;
+    /// <summary>
+    /// Current target node index in the connection drive path list
+    /// </summary>
     private int m_currentTargetNodeIndex = 0;
+    /// <summary>
+    /// Is the truck currently returning to it's home destination
+    /// </summary>
     private bool m_isReturningHome = false;
 
     /// <summary>
@@ -38,6 +60,36 @@ public class Truck : MonoBehaviour
         if (m_currentTargetNode)
         {
             DoMovement();
+
+            // If nearly reached destination
+            float nextNodeDistance = Vector3.Distance(transform.position, m_currentTargetNode.transform.position);
+            if (nextNodeDistance < DESTINATION_TOLERANCE)
+            {
+                // Increment and set new target game object
+                m_currentTargetNodeIndex++;
+
+                // Move target node to next node index
+                if (m_currentTargetNodeIndex > 0 && m_currentTargetNodeIndex < m_connectionDrivePath.Count)
+                {
+                    m_currentTargetNode = m_connectionDrivePath[m_currentTargetNodeIndex].ToNode;
+                }
+                else
+                {
+                    Debug.LogError("TargetNodeIndex is out of bounds!");
+                }
+            }
+            
+            float finalNodeDistance = Vector3.Distance(transform.position, m_connectionDrivePath[m_connectionDrivePath.Count - 1].ToNode.transform.position);
+            if (finalNodeDistance < DESTINATION_TOLERANCE)
+            {
+                // Invoke event for reached path end and remove target
+                OnReachedPathEnd?.Invoke();
+                ResetPath();
+
+                // Invoke event for reaching path start and remove target
+                //OnReachedPathStart?.Invoke();
+                //ResetPath();
+            }
         }
     }
     #endregion
@@ -55,6 +107,7 @@ public class Truck : MonoBehaviour
         }
 
         m_connectionDrivePath = connectionPath;
+        Debug.Log($"Truck '{this.name}' path set! '{m_connectionDrivePath.Count}' connections");
 
         if (m_currentTargetNode == null)
         {
@@ -76,40 +129,22 @@ public class Truck : MonoBehaviour
         // Set rotation to look at next connection
         this.transform.LookAt(m_currentTargetNode.transform.position);
         transform.eulerAngles = transform.eulerAngles - ModelRotationOffset;
+    }
 
-        // If nearly reached destination
-        if (Vector3.Distance(transform.position, m_currentTargetNode.transform.position) < DESTINATION_TOLERANCE)
-        {
-            // Check if index has reached destination to make truck drive home
-            if (m_currentTargetNodeIndex >= m_connectionDrivePath.Count)
-            {
-                m_isReturningHome = true;
-            }
-            else if (m_currentTargetNodeIndex <= 0)
-            {
-                m_isReturningHome = false;
-            }
+    protected void SetIsReturningHome(bool isReturningHome)
+    {
+        m_isReturningHome = isReturningHome;
+    }
 
-            // Check if target index is before last
-            if (!m_isReturningHome)
-            {
-                // Increment and set new target game object
-                m_currentTargetNodeIndex++;
-            }
-            else if (m_isReturningHome)
-            {
-                // Decrement and go back through path
-                m_currentTargetNodeIndex--;
-            }
+    public void DeliverPackage()
+    {
+        Debug.Log($"Delivered package at '{m_currentTargetNode.name}'");
+    }
 
-            if (m_currentTargetNodeIndex > 0 && m_currentTargetNodeIndex < m_connectionDrivePath.Count)
-            {
-                m_currentTargetNode = m_connectionDrivePath[m_currentTargetNodeIndex].ToNode;
-            }
-            else
-            {
-                Debug.LogError("TargetNodeIndex is out of bounds!");
-            }
-        }
+    private void ResetPath()
+    {
+        m_currentTargetNode = null;
+        m_currentTargetNodeIndex = 0;
+        m_connectionDrivePath = null;
     }
 }

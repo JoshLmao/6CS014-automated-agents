@@ -16,7 +16,11 @@ public class LoadEnvironment : MonoBehaviour
         }
         else
         {
-            SceneManager.LoadScene(m_environmentSceneName, LoadSceneMode.Additive);
+            // Only load environment if it isn't already
+            if (!SceneManager.GetSceneByName(m_environmentSceneName).isLoaded)
+            {
+                SceneManager.LoadScene(m_environmentSceneName, LoadSceneMode.Additive);
+            }
         }
     }
 }

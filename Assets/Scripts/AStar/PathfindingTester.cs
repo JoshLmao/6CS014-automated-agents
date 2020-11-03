@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// Tester script for verifying path functionality with movement
+/// </summary>
 public class PathfindingTester : MonoBehaviour
 {
     private AStarManager m_aStarManager = new AStarManager();
@@ -11,9 +14,9 @@ public class PathfindingTester : MonoBehaviour
     private List<Connection> m_connectionArray = new List<Connection>();
 
     [SerializeField]
-    private GameObject m_start;
+    private GameObject m_start = null;
     [SerializeField]
-    private GameObject m_end;
+    private GameObject m_end = null;
 
     private Vector3 m_offset = new Vector3(0, 0.3f, 0);
 

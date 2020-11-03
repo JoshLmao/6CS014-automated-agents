@@ -40,7 +40,7 @@ public class WaypointCON : MonoBehaviour
             DrawWaypoint(Color.red, Color.magenta, UpOffset);
         }
         else
-        {
+        { 
             DrawWaypoint(Color.yellow, Color.blue, NoOffset);
         }
 

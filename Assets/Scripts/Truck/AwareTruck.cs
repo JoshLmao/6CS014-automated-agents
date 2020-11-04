@@ -1,18 +1,22 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Truck : MonoBehaviour
+public class AwareTruck : MonoBehaviour
 {
     /// <summary>
     /// Maximum drive speed of the truck
     /// </summary>
-    public float Speed = 1.0f;
+    public float MaxSpeed = 1.0f;
 
     /// <summary>
-    /// Event for when truck reached it's end destination
+    /// Event for when truck reached it's end destination.
+    /// Params:
+    /// This truck that arrives at end waypoint
+    /// GameObject of destination waypoint
     /// </summary>
-    public event Action OnReachedPathEnd;
+    public event Action<AwareTruck, GameObject> OnReachedPathEnd;
 
     /// <summary>
     /// Current path for the truck to drive along
@@ -20,10 +24,8 @@ public class Truck : MonoBehaviour
     private List<Connection> m_connectionDrivePath = null;
 
     /// <summary>
-    /// Vector offset of the truck when moving along the coordinates of the connection
+    /// Amount of rotation to apply to model when setting look at rotation
     /// </summary>
-    //[SerializeField]
-    //private Vector3 ModelOffset = new Vector3(0, 1f, 0);
     [SerializeField]
     private Vector3 ModelRotationOffset = Vector3.zero;
 
@@ -35,22 +37,13 @@ public class Truck : MonoBehaviour
     /// Current target node index in the connection drive path list
     /// </summary>
     private int m_currentTargetNodeIndex = 0;
-    /// <summary>
-    /// Is the truck currently returning to it's home destination
-    /// </summary>
-    private bool m_isReturningHome = false;
 
     /// <summary>
     /// Amount of distance to target to consider the truck to be at it's destination
     /// </summary>
     private const float DESTINATION_TOLERANCE = 0.001f;
-    
-    #region MonoBehaviours
-    void Start()
-    {
-        
-    }
 
+    #region MonoBehaviours
     void Update()
     {
         if (m_currentTargetNode)
@@ -74,17 +67,14 @@ public class Truck : MonoBehaviour
                     //Debug.LogError("TargetNodeIndex is out of bounds!");
                 }
             }
-            
+
+            // Check if reached final node yet
             float finalNodeDistance = Vector3.Distance(transform.position, m_connectionDrivePath[m_connectionDrivePath.Count - 1].ToNode.transform.position);
             if (finalNodeDistance < DESTINATION_TOLERANCE)
             {
                 // Invoke event for reached path end and remove target
-                OnReachedPathEnd?.Invoke();
+                OnReachedPathEnd?.Invoke(this, m_connectionDrivePath[m_connectionDrivePath.Count - 1].ToNode);
                 ResetPath();
-
-                // Invoke event for reaching path start and remove target
-                //OnReachedPathStart?.Invoke();
-                //ResetPath();
             }
         }
     }
@@ -96,7 +86,7 @@ public class Truck : MonoBehaviour
     /// <param name="connectionPath">List of connections to drive along</param>
     public void DriveAlong(List<Connection> connectionPath)
     {
-        if (connectionPath == null|| connectionPath != null && connectionPath.Count <= 0)
+        if (connectionPath == null || connectionPath != null && connectionPath.Count <= 0)
         {
             Debug.LogError("Unable to drive along connection path. connectionPath invalid");
             return;
@@ -116,7 +106,7 @@ public class Truck : MonoBehaviour
     private void DoMovement()
     {
         // Calculate distance this step and move object
-        float step = Speed * Time.deltaTime;
+        float step = MaxSpeed * Time.deltaTime;
 
         // Move towards destination with offset
         Vector3 stepVector = Vector3.MoveTowards(this.transform.position, m_currentTargetNode.transform.position, step);
@@ -127,14 +117,9 @@ public class Truck : MonoBehaviour
         transform.eulerAngles = transform.eulerAngles - ModelRotationOffset;
     }
 
-    protected void SetIsReturningHome(bool isReturningHome)
-    {
-        m_isReturningHome = isReturningHome;
-    }
-
     public void DeliverPackage()
     {
-        Debug.Log($"Delivered package at '{m_currentTargetNode.name}'");
+        Debug.Log($"Truck '{this.gameObject.name}' delivered package at '{m_currentTargetNode.name}'");
     }
 
     private void ResetPath()
@@ -143,4 +128,5 @@ public class Truck : MonoBehaviour
         m_currentTargetNodeIndex = 0;
         m_connectionDrivePath = null;
     }
+
 }

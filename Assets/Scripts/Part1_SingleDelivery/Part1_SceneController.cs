@@ -20,7 +20,7 @@ public class Part1_SceneController : AStarSceneController
     /// <summary>
     /// Truck component on the TruckObject
     /// </summary>
-    private Truck m_truck;
+    private SimpleTruck m_truck;
 
     private bool m_returningToDepot = false;
 
@@ -51,7 +51,7 @@ public class Part1_SceneController : AStarSceneController
 
         if (TruckObject != null)
         {
-            m_truck = TruckObject.GetComponent<Truck>();
+            m_truck = TruckObject.GetComponent<SimpleTruck>();
             if (m_truck)
             {
                 m_truck.OnReachedPathEnd += OnReachedEndPath;

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Part1_Truck : SimpleTruck
+public class Part2_Truck : AwareTruck
 {
     
 }

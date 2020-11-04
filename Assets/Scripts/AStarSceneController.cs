@@ -55,15 +55,19 @@ public class AStarSceneController : MonoBehaviour
     }
 
     /// <summary>
-    /// Navigates using AStar from a start Waypoint GameObject to an End Waypoint GameObject
+    /// Navigates using AStar from a start Waypoint GameObject to an End Waypoint GameObject 
+    /// and stores the waypoint path in m_destinationPath
     /// </summary>
     /// <param name="start">The start waypoint gameobject</param>
     /// <param name="end">The end waypoint gameobject</param>
     /// <returns>If the AStar path was able to determine a path</returns>
     protected bool Navigate(GameObject start, GameObject end)
     {
+        if (m_destinationPath != null)
+            m_destinationPath = null;
+
         /// Validate start and end are legit
-        if (!start || !end)
+        if (start == null || end == null)
         {
             return false;
         }

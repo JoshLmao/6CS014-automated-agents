@@ -3,12 +3,20 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// AStar Pathfinding Truck that is aware of it's surroundings, giving way to 
+/// faster AwareTrucks if necessary, that can carry cargo
+/// </summary>
 public class AwareTruck : MonoBehaviour
 {
     /// <summary>
     /// Maximum drive speed of the truck
     /// </summary>
-    public float MaxSpeed = 1.0f;
+    public float MaxSpeed = 5.0f;
+    /// <summary>
+    /// Current cargo of ther Truck
+    /// </summary>
+    public Cargo Cargo = new Cargo();
 
     /// <summary>
     /// Event for when truck reached it's end destination.
@@ -24,12 +32,6 @@ public class AwareTruck : MonoBehaviour
     private List<Connection> m_connectionDrivePath = null;
 
     /// <summary>
-    /// Amount of rotation to apply to model when setting look at rotation
-    /// </summary>
-    [SerializeField]
-    private Vector3 ModelRotationOffset = Vector3.zero;
-
-    /// <summary>
     /// Current target node to move toward
     /// </summary>
     private GameObject m_currentTargetNode = null;
@@ -37,6 +39,12 @@ public class AwareTruck : MonoBehaviour
     /// Current target node index in the connection drive path list
     /// </summary>
     private int m_currentTargetNodeIndex = 0;
+
+    /// <summary>
+    /// Amount of rotation to apply to model when setting look at rotation
+    /// </summary>
+    [SerializeField]
+    private Vector3 ModelRotationOffset = Vector3.zero;
 
     /// <summary>
     /// Amount of distance to target to consider the truck to be at it's destination
@@ -48,7 +56,7 @@ public class AwareTruck : MonoBehaviour
     {
         if (m_currentTargetNode)
         {
-            DoMovement();
+            PerformMovement();
 
             // If nearly reached destination
             float nextNodeDistance = Vector3.Distance(transform.position, m_currentTargetNode.transform.position);
@@ -86,6 +94,10 @@ public class AwareTruck : MonoBehaviour
     /// <param name="connectionPath">List of connections to drive along</param>
     public void DriveAlong(List<Connection> connectionPath)
     {
+        // Reset any previous paths
+        m_connectionDrivePath = null;
+        m_currentTargetNode = null;
+
         if (connectionPath == null || connectionPath != null && connectionPath.Count <= 0)
         {
             Debug.LogError("Unable to drive along connection path. connectionPath invalid");
@@ -103,10 +115,17 @@ public class AwareTruck : MonoBehaviour
         }
     }
 
-    private void DoMovement()
+    /// <summary>
+    /// Update loop to perform the truck's movement to the next target node
+    /// </summary>
+    private void PerformMovement()
     {
-        // Calculate distance this step and move object
-        float step = MaxSpeed * Time.deltaTime;
+        // Calculate speed reduction from Cargo
+        float totalPackageSpeedReduction = CalculateCargoSpeedReduction();
+        float currentCargoSpeed = MaxSpeed - totalPackageSpeedReduction;
+
+        // Calculate step from the target speed
+        float step = currentCargoSpeed * Time.deltaTime;
 
         // Move towards destination with offset
         Vector3 stepVector = Vector3.MoveTowards(this.transform.position, m_currentTargetNode.transform.position, step);
@@ -114,19 +133,51 @@ public class AwareTruck : MonoBehaviour
 
         // Set rotation to look at next connection
         this.transform.LookAt(m_currentTargetNode.transform.position);
-        transform.eulerAngles = transform.eulerAngles - ModelRotationOffset;
+        this.transform.eulerAngles = transform.eulerAngles - ModelRotationOffset;
     }
 
+    /// <summary>
+    /// Deliveres a package form the cargo
+    /// </summary>
     public void DeliverPackage()
     {
         Debug.Log($"Truck '{this.gameObject.name}' delivered package at '{m_currentTargetNode.name}'");
+        Cargo.RemovePackages(1);
     }
 
+    /// <summary>
+    /// Set the amount of packages in the Truck's cargo
+    /// </summary>
+    /// <param name="packageAmt"></param>
+    public void SetPackages(int packageAmt)
+    {
+        Cargo.AddPackages(packageAmt);
+    }
+
+    /// <summary>
+    /// Resets the truck's current drive path
+    /// </summary>
     private void ResetPath()
     {
+        m_connectionDrivePath = null;
         m_currentTargetNode = null;
         m_currentTargetNodeIndex = 0;
-        m_connectionDrivePath = null;
     }
 
+    /// <summary>
+    /// Determines the amount to reduce the total speed by of the truck by it's carrying cargo
+    /// </summary>
+    /// <returns>The amount of speed to remove from the MaxSpeed</returns>
+    private float CalculateCargoSpeedReduction()
+    {
+        // Maximum percentage the maxSpeed will be reduced by 
+        const float MAX_PERCENT_REDUCE = 0.9f;
+
+        // Reduce the speed by maximum 90% per package in cargo
+        float nintyPercentSpeed = MaxSpeed * MAX_PERCENT_REDUCE;
+        float valueReducePer = nintyPercentSpeed / Cargo.MAX_PACKAGES;
+        float totalPackageSpeedReduction = valueReducePer * Cargo.PackageCount;
+
+        return totalPackageSpeedReduction;
+    }
 }

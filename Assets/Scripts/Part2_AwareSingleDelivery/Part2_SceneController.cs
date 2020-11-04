@@ -7,13 +7,13 @@ using UnityEngine;
 
 public class Part2_SceneController : AStarSceneController
 {
-    [System.Serializable]
+    [Serializable]
     public class TruckInfo
     {
         /// <summary>
         /// Truck GameObject used to navigate along the path
         /// </summary>
-        public GameObject Truck;
+        public GameObject TruckPrefab;
         /// <summary>
         /// Start waypoint for this truck
         /// </summary>
@@ -22,12 +22,21 @@ public class Part2_SceneController : AStarSceneController
         /// End waypoint for this waypoint
         /// </summary>
         public GameObject End;
+        /// <summary>
+        /// Amount of packages this truck has on start
+        /// </summary>
+        public int PackageCount;
     }
 
     /// <summary>
     /// All Trucks within the scene, with their start and end points
     /// </summary>
     public List<TruckInfo> Trucks = new List<TruckInfo>();
+
+    public Dictionary<GameObject, TruckInfo> InstantiatedTrucks = new Dictionary<GameObject, TruckInfo>();
+
+    [SerializeField]
+    private Transform m_truckParentTransform = null;
 
     protected override void Start()
     {
@@ -41,18 +50,23 @@ public class Part2_SceneController : AStarSceneController
                 continue;
             }
 
-            Part2_Truck p2Truck = info.Truck.GetComponent<Part2_Truck>();
+            GameObject spawnedTruck = Instantiate(info.TruckPrefab, m_truckParentTransform);
+            InstantiatedTrucks.Add(spawnedTruck, info);
+
+            Part2_Truck p2Truck = spawnedTruck.GetComponent<Part2_Truck>();
             if (p2Truck)
             {
                 bool canNavigate = this.Navigate(info.Start, info.End);
 
                 if (canNavigate)
                 {
+                    // Configure truck
                     p2Truck.OnReachedPathEnd += OnTruckReachedPathEnd;
+                    p2Truck.SetPackages(info.PackageCount);
 
                     p2Truck.DriveAlong(m_destinationPath);
 
-                    Debug.Log($"Truck '{info.Truck.name}' determined path to '{info.End.name}' with '{m_destinationPath.Count}' connections");
+                    Debug.Log($"Truck '{spawnedTruck.name}' determined path to '{info.End.name}' with '{m_destinationPath.Count}' connections");
                 }
             }
         }
@@ -60,11 +74,15 @@ public class Part2_SceneController : AStarSceneController
 
     private void OnTruckReachedPathEnd(AwareTruck truck, GameObject arrivalWaypoint)
     {
-        TruckInfo info = Trucks.FirstOrDefault(x => x.Truck.name == truck.gameObject.name);
-        if (info != null)
+        // Get the instantiated truck and it's info
+        KeyValuePair<GameObject, TruckInfo> kvp = InstantiatedTrucks.FirstOrDefault(x => x.Key.name == truck.gameObject.name);
+        
+        // Check it isn't null
+        if (kvp.Key != null && kvp.Value != null)
         {
-            // Check if the arrivalWaypoint is equal to the set end point
-            // and not arriving at Start waypoint
+            TruckInfo info = kvp.Value;
+
+            // Check if the arrivalWaypoint is equal to the set end point and not arriving at Start waypoint
             if (arrivalWaypoint == info.End)
             {
                 StartCoroutine(WaitAndNavigate(3f, truck, info.End, info.Start));

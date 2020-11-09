@@ -33,7 +33,9 @@ public class Part2_SceneController : AStarSceneController
     /// </summary>
     public List<TruckInfo> Trucks = new List<TruckInfo>();
 
-    public Dictionary<GameObject, TruckInfo> InstantiatedTrucks = new Dictionary<GameObject, TruckInfo>();
+    public Dictionary<AwareTruck, TruckInfo> InstantiatedTrucks = new Dictionary<AwareTruck, TruckInfo>();
+
+    private Dictionary<AwareTruck, Connection> m_currentTruckConnections = new Dictionary<AwareTruck, Connection>();
 
     [SerializeField]
     private Transform m_truckParentTransform = null;
@@ -51,9 +53,9 @@ public class Part2_SceneController : AStarSceneController
             }
 
             GameObject spawnedTruck = Instantiate(info.TruckPrefab, m_truckParentTransform);
-            InstantiatedTrucks.Add(spawnedTruck, info);
-
             Part2_Truck p2Truck = spawnedTruck.GetComponent<Part2_Truck>();
+            InstantiatedTrucks.Add(p2Truck, info);
+            
             if (p2Truck)
             {
                 bool canNavigate = this.Navigate(info.Start, info.End);
@@ -61,6 +63,7 @@ public class Part2_SceneController : AStarSceneController
                 if (canNavigate)
                 {
                     // Configure truck
+                    p2Truck.OnTravelNewConnection += OnTruckTravelNewConnection;
                     p2Truck.OnReachedPathEnd += OnTruckReachedPathEnd;
                     p2Truck.SetPackages(info.PackageCount);
 
@@ -72,10 +75,47 @@ public class Part2_SceneController : AStarSceneController
         }
     }
 
+    private void Update()
+    {
+        if (m_currentTruckConnections.Count > 0)
+        {
+            foreach(KeyValuePair<AwareTruck, Connection> thisKvp in m_currentTruckConnections)
+            {
+                // Compare waypoint names to check if they are the same
+                var matchingKvp = m_currentTruckConnections.FirstOrDefault(kvp => kvp.Value.ToNode.name == thisKvp.Value.ToNode.name);
+                if ( matchingKvp.Key != null && matchingKvp.Value != null )
+                {
+                    AwareTruck truckOne, truckTwo;
+                    truckOne = thisKvp.Key;
+                    truckTwo = matchingKvp.Key;
+                    
+                    if (truckOne.Cargo.PackageCount > truckTwo.Cargo.PackageCount)
+                    {
+                        //truckOne is slower
+                        truckOne.Pause();
+                        Debug.Log("Pausing Truck One");
+                    }
+                    else
+                    {
+                        //truckTwo is slower
+                        //or cargo is same so prioritise truckTwo
+                        truckTwo.Pause();
+                        Debug.Log("Pausing truck two");
+                    }                    
+                }
+            }
+        }
+    }
+
+    private void OnTruckTravelNewConnection(AwareTruck truck, Connection nextTravelConnection)
+    {
+        m_currentTruckConnections.Add(truck, nextTravelConnection);
+    }
+
     private void OnTruckReachedPathEnd(AwareTruck truck, GameObject arrivalWaypoint)
     {
         // Get the instantiated truck and it's info
-        KeyValuePair<GameObject, TruckInfo> kvp = InstantiatedTrucks.FirstOrDefault(x => x.Key.name == truck.gameObject.name);
+        KeyValuePair<AwareTruck, TruckInfo> kvp = InstantiatedTrucks.FirstOrDefault(x => x.Key.gameObject.name == truck.gameObject.name);
         
         // Check it isn't null
         if (kvp.Key != null && kvp.Value != null)

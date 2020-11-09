@@ -18,6 +18,7 @@ public class AwareTruck : MonoBehaviour
     /// </summary>
     public Cargo Cargo = new Cargo();
 
+    public event Action<AwareTruck, Connection> OnTravelNewConnection;
     /// <summary>
     /// Event for when truck reached it's end destination.
     /// Params:
@@ -68,7 +69,10 @@ public class AwareTruck : MonoBehaviour
                 // Move target node to next node index
                 if (m_currentTargetNodeIndex > 0 && m_currentTargetNodeIndex < m_connectionDrivePath.Count)
                 {
-                    m_currentTargetNode = m_connectionDrivePath[m_currentTargetNodeIndex].ToNode;
+                    Connection currentTargetConnection = m_connectionDrivePath[m_currentTargetNodeIndex];
+                    m_currentTargetNode = currentTargetConnection.ToNode;
+
+                    OnTravelNewConnection?.Invoke(this, currentTargetConnection);
                 }
                 else
                 {
@@ -179,5 +183,10 @@ public class AwareTruck : MonoBehaviour
         float totalPackageSpeedReduction = valueReducePer * Cargo.PackageCount;
 
         return totalPackageSpeedReduction;
+    }
+
+    public void Pause()
+    {
+        
     }
 }

@@ -33,13 +33,23 @@ public class Part2_SceneController : AStarSceneController
     /// </summary>
     public List<TruckInfo> Trucks = new List<TruckInfo>();
 
+    /// <summary>
+    /// List of Instantiated tricks and their travel info
+    /// </summary>
     public Dictionary<AwareTruck, TruckInfo> InstantiatedTrucks = new Dictionary<AwareTruck, TruckInfo>();
 
+    /// <summary>
+    /// List of active trucks and their current travel to connection
+    /// </summary>
     private Dictionary<AwareTruck, Connection> m_currentTruckConnections = new Dictionary<AwareTruck, Connection>();
 
+    /// <summary>
+    /// Transform to spawn trucks under
+    /// </summary>
     [SerializeField]
     private Transform m_truckParentTransform = null;
 
+    #region MonoBehaviours
     protected override void Start()
     {
         base.Start();
@@ -67,6 +77,7 @@ public class Part2_SceneController : AStarSceneController
                     p2Truck.OnReachedPathEnd += OnTruckReachedPathEnd;
                     p2Truck.SetPackages(info.PackageCount);
 
+                    // Set Truck drive path
                     p2Truck.DriveAlong(m_destinationPath);
 
                     Debug.Log($"Truck '{spawnedTruck.name}' determined path to '{info.End.name}' with '{m_destinationPath.Count}' connections");
@@ -79,39 +90,89 @@ public class Part2_SceneController : AStarSceneController
     {
         if (m_currentTruckConnections.Count > 0)
         {
+            /// For each truck and it's current connection
             foreach(KeyValuePair<AwareTruck, Connection> thisKvp in m_currentTruckConnections)
             {
-                // Compare waypoint names to check if they are the same
-                var matchingKvp = m_currentTruckConnections.FirstOrDefault(kvp => kvp.Value.ToNode.name == thisKvp.Value.ToNode.name);
+                /// Compare waypoint names to check if they are the same
+                KeyValuePair<AwareTruck, Connection> matchingKvp = m_currentTruckConnections
+                    .FirstOrDefault( kvp => kvp.Value.ToNode.name == thisKvp.Value.ToNode.name && kvp.Key.name != thisKvp.Key.name );
+                AwareTruck truckOne = thisKvp.Key;
+                AwareTruck truckTwo = matchingKvp.Key;
+
+                /// If current iterarte truck is waiting, check if they can resume
+                /// Only check truck one as the others will be checked next iteration
+                if (truckOne.IsWaiting)
+                {
+                    List<AwareTruck> waitingTrucks = new List<AwareTruck>();
+                    bool isOnSameConnection = false;
+                    foreach (KeyValuePair<AwareTruck, Connection> checkKvp in m_currentTruckConnections)
+                    {
+                        if (thisKvp.Value.ToNode.name == checkKvp.Value.ToNode.name)
+                        {
+                            //isOnSameConnection = true;
+                            waitingTrucks.Add(thisKvp.Key);
+                        }
+                    }
+
+                    // More than 1 truck waiting at same connection, resume first one in list
+                    if (waitingTrucks.Count > 1)
+                    {
+                        waitingTrucks[0].Resume();
+                        Debug.Log($"Resuming Truck '{waitingTrucks[0]}' in queue of '{waitingTrucks.Count}'");
+                    }
+                    // else if truckOne has no others waiting, resume
+                    else if (!isOnSameConnection)
+                    {
+                        truckOne.Resume();
+                        Debug.Log($"Resuming Truck '{truckOne.name}'");
+                    }
+                }
+
+                // Check match isn't null
                 if ( matchingKvp.Key != null && matchingKvp.Value != null )
                 {
-                    AwareTruck truckOne, truckTwo;
-                    truckOne = thisKvp.Key;
-                    truckTwo = matchingKvp.Key;
-                    
-                    if (truckOne.Cargo.PackageCount > truckTwo.Cargo.PackageCount)
+                    /// If isn't waiting and connections are matching...
+                    bool eitherTruckWaiting = truckOne.IsWaiting || truckTwo.IsWaiting;
+                    if (!eitherTruckWaiting && thisKvp.Value.ToNode.name == matchingKvp.Value.ToNode.name)
                     {
-                        //truckOne is slower
-                        truckOne.Pause();
-                        Debug.Log("Pausing Truck One");
+                        if (truckOne.Cargo.PackageCount > truckTwo.Cargo.PackageCount)
+                        {
+                            ///truckOne is slower, pause it
+                            truckOne.Pause();
+                            Debug.Log($"Pausing Truck '{truckOne.name};");
+                        }
+                        else
+                        {
+                            /// truckTwo is slower
+                            /// or cargo is same so prioritise truckTwo
+                            truckTwo.Pause();
+                            Debug.Log($"Pausing Truck '{truckTwo.name}'");
+                        }
                     }
-                    else
-                    {
-                        //truckTwo is slower
-                        //or cargo is same so prioritise truckTwo
-                        truckTwo.Pause();
-                        Debug.Log("Pausing truck two");
-                    }                    
                 }
             }
         }
     }
+    #endregion
 
     private void OnTruckTravelNewConnection(AwareTruck truck, Connection nextTravelConnection)
     {
-        m_currentTruckConnections.Add(truck, nextTravelConnection);
+        // Update or add new connection to list
+        if (m_currentTruckConnections.ContainsKey(truck))
+        {
+            m_currentTruckConnections[truck] = nextTravelConnection;
+        }
+        else
+        {
+            m_currentTruckConnections.Add(truck, nextTravelConnection);
+        }
     }
 
+    /// <summary>
+    /// Functionality for when a truck reaches its final path end
+    /// </summary>
+    /// <param name="truck"></param>
+    /// <param name="arrivalWaypoint"></param>
     private void OnTruckReachedPathEnd(AwareTruck truck, GameObject arrivalWaypoint)
     {
         // Get the instantiated truck and it's info
@@ -132,6 +193,14 @@ public class Part2_SceneController : AStarSceneController
         }
     }
 
+    /// <summary>
+    /// Coroutine for waiting X seconds and then navigating from a start and end on an AwareTruck
+    /// </summary>
+    /// <param name="seconds"></param>
+    /// <param name="truck"></param>
+    /// <param name="start"></param>
+    /// <param name="end"></param>
+    /// <returns></returns>
     private IEnumerator WaitAndNavigate(float seconds, AwareTruck truck, GameObject start, GameObject end)
     {
         yield return new WaitForSeconds(seconds);

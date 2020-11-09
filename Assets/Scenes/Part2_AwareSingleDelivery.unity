@@ -3568,7 +3568,7 @@ MonoBehaviour:
   - TruckPrefab: {fileID: 5536611378484013267, guid: def8760032a7b2046946c483532b6239, type: 3}
     Start: {fileID: 678335413}
     End: {fileID: 945016095}
-    PackageCount: 1
+    PackageCount: 4
   - TruckPrefab: {fileID: 8207220362266521169, guid: 46b6da8d599627a4fb53734f27206889, type: 3}
     Start: {fileID: 1022734425}
     End: {fileID: 1627819861}

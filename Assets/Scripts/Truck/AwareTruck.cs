@@ -18,6 +18,14 @@ public class AwareTruck : MonoBehaviour
     /// </summary>
     public Cargo Cargo = new Cargo();
 
+    /// <summary>
+    /// Is the truck waiting for another to pass?
+    /// </summary>
+    public bool IsWaiting = false;
+
+    /// <summary>
+    /// Event for when the aware truck finished travelling a connection and starts towards another
+    /// </summary>
     public event Action<AwareTruck, Connection> OnTravelNewConnection;
     /// <summary>
     /// Event for when truck reached it's end destination.
@@ -55,8 +63,9 @@ public class AwareTruck : MonoBehaviour
     #region MonoBehaviours
     void Update()
     {
-        if (m_currentTargetNode)
+        if (m_currentTargetNode && !IsWaiting)
         {
+            // Move Truck towards next connection
             PerformMovement();
 
             // If nearly reached destination
@@ -115,7 +124,11 @@ public class AwareTruck : MonoBehaviour
         {
             // Set Truck position from first FromNode and target to ToNode
             this.transform.position = m_connectionDrivePath[m_currentTargetNodeIndex].FromNode.transform.position;
-            m_currentTargetNode = m_connectionDrivePath[m_currentTargetNodeIndex].ToNode;
+            Connection nextConnection = m_connectionDrivePath[m_currentTargetNodeIndex];
+            m_currentTargetNode = nextConnection.ToNode;
+
+            // Fire event to first set new target location
+            OnTravelNewConnection?.Invoke(this, nextConnection);
         }
     }
 
@@ -187,6 +200,11 @@ public class AwareTruck : MonoBehaviour
 
     public void Pause()
     {
-        
+        IsWaiting = true;
+    }
+
+    public void Resume()
+    {
+        IsWaiting = false;
     }
 }

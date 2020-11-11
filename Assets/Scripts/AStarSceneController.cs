@@ -19,13 +19,11 @@ public class AStarSceneController : MonoBehaviour
     protected List<Connection> m_destinationPath = new List<Connection>();
 
     #region MonoBehaviours
-    
     protected virtual void Start()
     {
         InitAStarManager();
         Debug.Log($"Initialized AStarManager with '{m_allWaypoints.Count}' waypoints");
     }
-
     #endregion
 
     private void InitAStarManager()

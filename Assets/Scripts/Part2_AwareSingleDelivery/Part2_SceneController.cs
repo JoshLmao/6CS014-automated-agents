@@ -117,13 +117,13 @@ public class Part2_SceneController : AStarSceneController
                     // More than 1 truck waiting at same connection, resume first one in list
                     if (waitingTrucks.Count > 1)
                     {
-                        waitingTrucks[0].Resume();
+                        waitingTrucks[0].ResumeMovement();
                         Debug.Log($"Resuming Truck '{waitingTrucks[0]}' in queue of '{waitingTrucks.Count}'");
                     }
                     // else if truckOne has no others waiting, resume
                     else if (!isOnSameConnection)
                     {
-                        truckOne.Resume();
+                        truckOne.ResumeMovement();
                         Debug.Log($"Resuming Truck '{truckOne.name}'");
                     }
                 }
@@ -138,14 +138,14 @@ public class Part2_SceneController : AStarSceneController
                         if (truckOne.Cargo.PackageCount > truckTwo.Cargo.PackageCount)
                         {
                             ///truckOne is slower, pause it
-                            truckOne.Pause();
+                            truckOne.PauseMovement();
                             Debug.Log($"Pausing Truck '{truckOne.name};");
                         }
                         else
                         {
                             /// truckTwo is slower
                             /// or cargo is same so prioritise truckTwo
-                            truckTwo.Pause();
+                            truckTwo.PauseMovement();
                             Debug.Log($"Pausing Truck '{truckTwo.name}'");
                         }
                     }

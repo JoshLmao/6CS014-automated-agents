@@ -9,6 +9,15 @@ EditorBuildSettings:
     path: Assets/Scenes/Part1_SingleDelivery.unity
     guid: 6713965000409f9429cd70969c01421a
   - enabled: 1
-    path: Assets/Scenes/Environment.unity
+    path: Assets/Scenes/Part2_AwareSingleDelivery.unity
+    guid: 72fc12e5b5103734cb7e0672a9edfa0a
+  - enabled: 1
+    path: Assets/Scenes/Part3_ACO.unity
+    guid: ee4dc293e9b7def41a210a8e4f5570ac
+  - enabled: 1
+    path: Assets/Scenes/Environments/CityEnvironment.unity
     guid: 9fc0d4010bbf28b4594072e72b8655ab
+  - enabled: 1
+    path: Assets/Scenes/Environments/ForestEnvironment.unity
+    guid: 2d3facf91263ee2458356041e2ec72ef
   m_configObjects: {}

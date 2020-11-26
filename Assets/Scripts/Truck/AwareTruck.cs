@@ -56,29 +56,26 @@ public class AwareTruck : MonoBehaviour
     [SerializeField]
     private Vector3 ModelRotationOffset = Vector3.zero;
 
-    /// <summary>
-    /// Text to display how many parcels the truck is carrying
-    /// </summary>
-    private Text m_parcelText = null;
-    /// <summary>
-    /// Text that displays the current status of the truck
-    /// </summary>
-    private Text m_statusText = null;
 
     /// <summary>
     /// Amount of distance to target to consider the truck to be at it's destination
     /// </summary>
     private const float DESTINATION_TOLERANCE = 0.001f;
 
+    /// <summary>
+    /// Controller for UI to display how much is carrying in Cargo
+    /// </summary>
+    private CargoUIController m_ui = null;
+
     #region MonoBehaviours
     private void Awake()
     {
-        InitUI();
+        m_ui = this.gameObject.AddComponent<CargoUIController>();
     }
 
     private void Start()
     {
-        SetParcelText($"Cargo: {Cargo.PackageCount}");
+        m_ui.SetCargoAmount(Cargo.PackageCount);
     }
 
     void Update()
@@ -122,7 +119,7 @@ public class AwareTruck : MonoBehaviour
                     Connection finalConnection = m_connectionDrivePath[m_connectionDrivePath.Count - 1];
                     OnReachedPathEnd?.Invoke(this, finalConnection.ToNode);
 
-                    SetStatusText($"Finished path to '{finalConnection.ToNode.name}'");
+                    m_ui.SetStatusText($"Finished path to '{finalConnection.ToNode.name}'");
                     
                     ResetPath();
                 }
@@ -160,7 +157,7 @@ public class AwareTruck : MonoBehaviour
             // Fire event to first set new target location
             OnTravelNewConnection?.Invoke(this, nextConnection);
 
-            SetStatusText($"New Path: Driving to '{connectionPath[connectionPath.Count - 1].ToNode.name}'");
+            m_ui.SetStatusText($"New Path: Driving to '{connectionPath[connectionPath.Count - 1].ToNode.name}'");
         }
     }
 
@@ -199,7 +196,7 @@ public class AwareTruck : MonoBehaviour
         Debug.Log($"Truck '{this.gameObject.name}' delivered package at '{m_currentTargetNode.name}'");
         Cargo.RemovePackages(1);
 
-        SetParcelText($"Parcels: {Cargo.PackageCount}");
+        m_ui.SetCargoAmount(Cargo.PackageCount);
     }
 
     /// <summary>
@@ -210,7 +207,7 @@ public class AwareTruck : MonoBehaviour
     {
         Cargo.AddPackages(packageAmt);
 
-        SetParcelText($"Parcels: {Cargo.PackageCount}");
+        m_ui.SetCargoAmount(Cargo.PackageCount);
     }
 
     /// <summary>
@@ -246,7 +243,7 @@ public class AwareTruck : MonoBehaviour
     public void PauseMovement()
     {
         if (!IsWaiting)
-            SetStatusText($"Waiting at '{m_connectionDrivePath[m_currentTargetNodeIndex].FromNode.name}'");
+            m_ui.SetStatusText($"Waiting at '{m_connectionDrivePath[m_currentTargetNodeIndex].FromNode.name}'");
         
         IsWaiting = true;
     }
@@ -257,103 +254,10 @@ public class AwareTruck : MonoBehaviour
     public void ResumeMovement()
     {
         if (IsWaiting)
-            SetStatusText($"Resuming to '{m_connectionDrivePath[m_connectionDrivePath.Count - 1].ToNode.name}'");
+            m_ui.SetStatusText($"Resuming to '{m_connectionDrivePath[m_connectionDrivePath.Count - 1].ToNode.name}'");
 
         IsWaiting = false;
     }
 
-    private void InitUI()
-    {
-        // Configure containing game object
-        GameObject canvasGO = new GameObject("TruckCanvas", typeof(RectTransform));
-        canvasGO.transform.SetParent(this.transform);
-        canvasGO.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
-        canvasGO.transform.localEulerAngles = new Vector3(90f, 90f, 0f);
 
-        // Configure the canvas
-        Vector2 canvasSize = new Vector2(100f, 100f);
-        float biggerTextHeight = canvasSize.y / 1.5f;
-
-        Canvas canvas = canvasGO.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.WorldSpace;
-        // Set canvas height/width
-        canvas.GetComponent<RectTransform>().sizeDelta = canvasSize;
-        // Set Canvas X & Y
-        canvas.transform.localPosition = new Vector3(0.0f, 4f, 0f);
-
-        // text game object
-        GameObject txtGO = new GameObject("TextGO", typeof(RectTransform));
-        txtGO.transform.SetParent(canvasGO.transform);
-        txtGO.transform.localPosition = Vector3.zero;
-
-        // RectTransform on text game object
-        RectTransform statusRect = txtGO.GetComponent<RectTransform>();
-        statusRect.localScale = Vector3.one;
-        statusRect.right = statusRect.up = Vector3.zero;
-        statusRect.localEulerAngles = Vector3.zero;
-
-        // Stretch preset values
-        statusRect.anchorMin = new Vector2(0f, 0f);
-        statusRect.anchorMax = new Vector2(1f, 0f);
-        statusRect.pivot = new Vector2(0.5f, 0f);
-        statusRect.offsetMin = statusRect.offsetMax = Vector3.zero;
-        // Set Y size half of total canvas
-        statusRect.sizeDelta = new Vector2(0f, biggerTextHeight);
-
-        // status text settings
-        m_statusText = txtGO.AddComponent<Text>();
-        // Set default text cause Unity doesn't do this for some reason 🤔
-        m_statusText.font = Resources.GetBuiltinResource(typeof(Font), "Arial.ttf") as Font;
-        //m_statusText.text = "";
-        m_statusText.color = Color.white;
-        m_statusText.fontSize = 15;
-
-        GameObject parcelTxtGO = new GameObject("ParcelGO", typeof(RectTransform));
-        parcelTxtGO.transform.SetParent(canvasGO.transform);
-        parcelTxtGO.transform.localPosition = Vector3.zero;
-        
-        // Set RectTransform on parcel text
-        RectTransform parcelRect = parcelTxtGO.GetComponent<RectTransform>();
-        parcelRect.localScale = Vector3.one;
-        parcelRect.right = parcelRect.up = Vector3.zero;
-        parcelRect.localEulerAngles = Vector3.zero;
-        // Stretch preset values
-        parcelRect.anchorMin = new Vector2(0f, 1f);
-        parcelRect.anchorMax = new Vector2(1f, 1f);
-        parcelRect.pivot = new Vector2(0.5f, 1f);
-        parcelRect.offsetMin = parcelRect.offsetMax = Vector3.zero;
-        // Set Y size half of total canvas
-        parcelRect.sizeDelta = new Vector2(0f, canvasSize.y - biggerTextHeight);
-
-        // Add Text component for parcels
-        m_parcelText = parcelTxtGO.AddComponent<Text>();
-        m_parcelText.font = Resources.GetBuiltinResource(typeof(Font), "Arial.ttf") as Font;
-        m_parcelText.text = $"Parcels: {Cargo.PackageCount}";
-        m_parcelText.color = Color.white;
-        m_parcelText.fontSize = 15;
-    }
-
-    /// <summary>
-    /// Sets the status message text above the truck
-    /// </summary>
-    /// <param name="message"></param>
-    private void SetStatusText(string message)
-    {
-        if (m_statusText)
-        {
-            m_statusText.text = message;
-        }
-    }
-
-    /// <summary>
-    /// Sets the parcel message text in the truck's canvas
-    /// </summary>
-    /// <param name="message"></param>
-    private void SetParcelText(string message)
-    {
-        if (m_parcelText)
-        {
-            m_parcelText.text = message;
-        }
-    }
 }

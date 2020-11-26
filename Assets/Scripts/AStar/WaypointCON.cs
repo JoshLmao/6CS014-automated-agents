@@ -13,21 +13,19 @@ public class WaypointCON : MonoBehaviour
     }
 
     [SerializeField]
-    private enum waypointPropsList {  Standard, Goal };
+    public enum waypointPropsList {  Standard, Goal };
     [SerializeField]
-    private waypointPropsList WaypointType = waypointPropsList.Standard;
+    public waypointPropsList WaypointType = waypointPropsList.Standard;
 
     private bool m_objectSelected = false;
     private Vector3 NoOffset = new Vector3(0, 0, 0);
     private Vector3 UpOffset = new Vector3(0, 0.1f, 0);
 
-    // Start is called before the first frame update
     void Start()
     {
         
     }
 
-    // Update is called once per frame
     void Update()
     {
         

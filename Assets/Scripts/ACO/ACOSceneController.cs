@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class ACOSceneController : MonoBehaviour
+public class ACOSceneController : AStarSceneController
 {
     private ACOCON m_acoCon = new ACOCON();
 

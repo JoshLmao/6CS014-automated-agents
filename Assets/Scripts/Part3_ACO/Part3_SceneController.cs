@@ -22,11 +22,15 @@ public class Part3_SceneController : ACOSceneController
 
     private List<GameObject> m_instantiatedSquirrels = new List<GameObject>();
 
+    private List<ACOConnection> m_setPath = null;
+
     private const string WAYPOINT_TAG = "Waypoint";
 
     #region MonoBehaviours
-    void Start()
+    protected override void Start()
     {
+        base.Start();
+
         InitSquirrels();
     }
 
@@ -38,14 +42,22 @@ public class Part3_SceneController : ACOSceneController
     // Draws debug objects in the editor and during editor play (if option set).
     void OnDrawGizmos()
     {
-       
+        if (m_setPath != null && m_setPath.Count > 0)
+        {
+            Vector3 offset = new Vector3(0, 0.3f, 0);
+            foreach (ACOConnection aConn in m_setPath)
+            {
+                Gizmos.color = Color.white;
+                Gizmos.DrawLine(aConn.FromNode.transform.position + offset, aConn.ToNode.transform.position + offset);
+            }
+        }
     }
     #endregion
 
     private void InitSquirrels()
     {
-        List<GameObject> allWaypoints = GetAllSceneGoalWaypoints();
-        List<ACOConnection> allWaypointConnections = GetConnectionsFromWaypoints(allWaypoints, this.DefaultPheromone);
+        List<GameObject> allGoalWaypoints = GetAllSceneGoalWaypoints();
+        List<ACOConnection> allWaypointConnections = GetConnectionsFromWaypoints(m_allWaypoints, this.DefaultPheromone);
 
         /// Iterate over each SquirrelInfo and configure
         foreach(SquirrelInfo sInfo in SquirrelsInfo)
@@ -66,11 +78,28 @@ public class Part3_SceneController : ACOSceneController
             {
                 int iterationsMax = 150;
                 int ants = 50;
-                List<ACOConnection> acoPath = this.GenerateACOPath(iterationsMax, ants, allWaypoints.ToArray(), allWaypointConnections, sInfo.Start, ACOMaxPathLength );
+
+                List<ACOConnection> acoPath = this.GenerateACOPath(iterationsMax, ants, allGoalWaypoints.ToArray(), allWaypointConnections, sInfo.Start, ACOMaxPathLength);
 
                 aware.SetMovePath(acoPath);
+
+                m_setPath = acoPath;
             }
         }
+    }
+
+    private List<GameObject> GetAllWaypointsInConnection(List<Connection> conns)
+    {
+        List<GameObject> allObjs = new List<GameObject>();
+        foreach(Connection c in conns)
+        {
+            allObjs.Add(c.FromNode);
+        }
+        var last = conns.LastOrDefault();
+        if (last != null)
+            allObjs.Add(last.ToNode);
+
+        return allObjs; 
     }
 
     /// <summary>

@@ -1,4 +1,7 @@
-﻿public class Cargo
+﻿/// <summary>
+/// Cargo class for holding onto packages
+/// </summary>
+public class Cargo
 {
     /// <summary>
     /// Maximum amount of packages a truck can carry in it's cargo

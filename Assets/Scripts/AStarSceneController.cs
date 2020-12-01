@@ -8,15 +8,16 @@ public class AStarSceneController : MonoBehaviour
     /// The AStarManager for the scene
     /// </summary>
     private AStarManager m_astarManager = new AStarManager();
+    
     /// <summary>
     /// All waypoints inside the active scene
     /// </summary>
-    private List<GameObject> m_allWaypoints = new List<GameObject>();
+    protected List<GameObject> m_allWaypoints = new List<GameObject>();
 
     /// <summary>
     /// List of Connections to the target destination waypoint
     /// </summary>
-    protected List<Connection> m_destinationPath = new List<Connection>();
+    //protected List<Connection> m_destinationPath = new List<Connection>();
 
     #region MonoBehaviours
     protected virtual void Start()
@@ -59,15 +60,12 @@ public class AStarSceneController : MonoBehaviour
     /// <param name="start">The start waypoint gameobject</param>
     /// <param name="end">The end waypoint gameobject</param>
     /// <returns>If the AStar path was able to determine a path</returns>
-    protected bool Navigate(GameObject start, GameObject end)
+    protected List<Connection> Navigate(GameObject start, GameObject end)
     {
-        if (m_destinationPath != null)
-            m_destinationPath = null;
-
         /// Validate start and end are legit
         if (start == null || end == null)
         {
-            return false;
+            return null;
         }
 
         /// Pathfind from start to end and check connection path is valid
@@ -75,11 +73,11 @@ public class AStarSceneController : MonoBehaviour
 
         if (connectionPath == null || connectionPath != null && connectionPath.Count <= 0)
         {
-            return false;
+            return null;
         }
 
         /// Set destination array and return true
-        m_destinationPath = connectionPath;
-        return true;
+        //m_destinationPath = connectionPath;
+        return connectionPath;
     }
 }

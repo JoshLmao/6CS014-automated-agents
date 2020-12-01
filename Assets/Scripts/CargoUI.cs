@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -13,6 +14,10 @@ public class CargoUIController : MonoBehaviour
     /// Text that displays the current status
     /// </summary>
     private Text m_statusText = null;
+
+    private GameObject m_canvasGO = null;
+
+    private const float DEFAULT_SCALE = 0.1f;
 
     #region MonoBehaviours
     void Awake()
@@ -48,16 +53,16 @@ public class CargoUIController : MonoBehaviour
     private void InitUI()
     {
         // Configure containing game object
-        GameObject canvasGO = new GameObject("TruckCanvas", typeof(RectTransform));
-        canvasGO.transform.SetParent(this.transform);
-        canvasGO.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
-        canvasGO.transform.localEulerAngles = new Vector3(90f, 90f, 0f);
+        m_canvasGO = new GameObject("TruckCanvas", typeof(RectTransform));
+        m_canvasGO.transform.SetParent(this.transform);
+        m_canvasGO.transform.localScale = new Vector3(DEFAULT_SCALE, DEFAULT_SCALE, DEFAULT_SCALE);
+        m_canvasGO.transform.localEulerAngles = new Vector3(90f, 90f, 0f);
 
         // Configure the canvas
         Vector2 canvasSize = new Vector2(100f, 100f);
         float biggerTextHeight = canvasSize.y / 1.5f;
 
-        Canvas canvas = canvasGO.AddComponent<Canvas>();
+        Canvas canvas = m_canvasGO.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.WorldSpace;
         // Set canvas height/width
         canvas.GetComponent<RectTransform>().sizeDelta = canvasSize;
@@ -66,7 +71,7 @@ public class CargoUIController : MonoBehaviour
 
         // text game object
         GameObject txtGO = new GameObject("TextGO", typeof(RectTransform));
-        txtGO.transform.SetParent(canvasGO.transform);
+        txtGO.transform.SetParent(m_canvasGO.transform);
         txtGO.transform.localPosition = Vector3.zero;
 
         // RectTransform on text game object
@@ -92,7 +97,7 @@ public class CargoUIController : MonoBehaviour
         m_statusText.fontSize = 15;
 
         GameObject parcelTxtGO = new GameObject("ParcelGO", typeof(RectTransform));
-        parcelTxtGO.transform.SetParent(canvasGO.transform);
+        parcelTxtGO.transform.SetParent(m_canvasGO.transform);
         parcelTxtGO.transform.localPosition = Vector3.zero;
 
         // Set RectTransform on parcel text
@@ -114,5 +119,15 @@ public class CargoUIController : MonoBehaviour
         m_cargoText.text = $"Parcels: 0";
         m_cargoText.color = Color.white;
         m_cargoText.fontSize = 15;
+    }
+
+    /// <summary>
+    /// Sets the Canvas to a new scale
+    /// </summary>
+    /// <param name="scale">Amount to scale to. 1 for the default scale, < 1 for smaller or > 1 for bigger</param>
+    public void SetUIScale(float scale)
+    {
+        float newScale = DEFAULT_SCALE * scale;
+        m_canvasGO.transform.localScale = new Vector3(newScale, newScale, newScale);
     }
 }

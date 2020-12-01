@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using UnityEngine;
 using System;
+using System.Collections.Generic;
 
 public class Part1_SceneController : AStarSceneController
 {
@@ -40,8 +41,8 @@ public class Part1_SceneController : AStarSceneController
         }
 
         /// Navigate a path from start to end waypoints
-        bool canNavigate = this.Navigate(StartWaypoint, DeliveryDestination);
-        if (!canNavigate)
+        List<Connection> connectionPath = this.Navigate(StartWaypoint, DeliveryDestination);
+        if (connectionPath == null)
         {
             Debug.LogError("Unable to find a path to destination");
             return;
@@ -56,7 +57,7 @@ public class Part1_SceneController : AStarSceneController
             {
                 m_truck.OnReachedPathEnd += OnReachedEndPath;
                 
-                m_truck.DriveAlong(m_destinationPath);
+                m_truck.DriveAlong(connectionPath);
             }
         }
         else
@@ -93,7 +94,7 @@ public class Part1_SceneController : AStarSceneController
         yield return new WaitForSeconds(seconds);
 
         // Determine and set a new drive path for Truck
-        this.Navigate(start, end);
-        m_truck.DriveAlong(m_destinationPath);
+        List<Connection> returnPath = this.Navigate(start, end);
+        m_truck.DriveAlong(returnPath);
     }
 }

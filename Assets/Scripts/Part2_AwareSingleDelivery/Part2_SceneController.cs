@@ -68,9 +68,9 @@ public class Part2_SceneController : AStarSceneController
             
             if (p2Truck)
             {
-                bool canNavigate = this.Navigate(info.Start, info.End);
+                List<Connection> connetionPath = this.Navigate(info.Start, info.End);
 
-                if (canNavigate)
+                if (connetionPath != null)
                 {
                     // Configure truck
                     p2Truck.OnTravelNewConnection += OnTruckTravelNewConnection;
@@ -78,9 +78,9 @@ public class Part2_SceneController : AStarSceneController
                     p2Truck.SetPackages(info.PackageCount);
 
                     // Set Truck drive path
-                    p2Truck.DriveAlong(m_destinationPath);
+                    p2Truck.DriveAlong(connetionPath);
 
-                    Debug.Log($"Truck '{spawnedTruck.name}' determined path to '{info.End.name}' with '{m_destinationPath.Count}' connections");
+                    Debug.Log($"Truck '{spawnedTruck.name}' determined path to '{info.End.name}' with '{connetionPath.Count}' connections");
                 }
             }
         }
@@ -206,10 +206,10 @@ public class Part2_SceneController : AStarSceneController
         yield return new WaitForSeconds(seconds);
 
         // Truck has arrived at destined End point, make it travel back
-        bool canNav = this.Navigate(start, end);
-        if (canNav)
+        List<Connection> navPath = this.Navigate(start, end);
+        if (navPath != null)
         {
-            truck.DriveAlong(m_destinationPath);
+            truck.DriveAlong(navPath);
 
             Debug.Log($"Truck '{truck.gameObject.name}' returning to depot/start at '{end.name}'");
         }

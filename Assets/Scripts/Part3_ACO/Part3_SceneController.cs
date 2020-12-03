@@ -22,7 +22,7 @@ public class Part3_SceneController : ACOSceneController
 
     private List<GameObject> m_instantiatedSquirrels = new List<GameObject>();
 
-    private List<ACOConnection> m_setPath = null;
+    private List<ACOConnection> m_gizmoPath = null;
 
     private const string WAYPOINT_TAG = "Waypoint";
 
@@ -34,18 +34,13 @@ public class Part3_SceneController : ACOSceneController
         InitSquirrels();
     }
 
-    void Update()
-    {
-        
-    }
-
     // Draws debug objects in the editor and during editor play (if option set).
     void OnDrawGizmos()
     {
-        if (m_setPath != null && m_setPath.Count > 0)
+        if (m_gizmoPath != null && m_gizmoPath.Count > 0)
         {
             Vector3 offset = new Vector3(0, 0.3f, 0);
-            foreach (ACOConnection aConn in m_setPath)
+            foreach (ACOConnection aConn in m_gizmoPath)
             {
                 Gizmos.color = Color.white;
                 Gizmos.DrawLine(aConn.FromNode.transform.position + offset, aConn.ToNode.transform.position + offset);
@@ -56,9 +51,6 @@ public class Part3_SceneController : ACOSceneController
 
     private void InitSquirrels()
     {
-        List<GameObject> allGoalWaypoints = GetAllSceneGoalWaypoints();
-        List<ACOConnection> allWaypointConnections = GetConnectionsFromWaypoints(m_allWaypoints, this.DefaultPheromone);
-
         /// Iterate over each SquirrelInfo and configure
         foreach(SquirrelInfo sInfo in SquirrelsInfo)
         {
@@ -79,11 +71,43 @@ public class Part3_SceneController : ACOSceneController
                 int iterationsMax = 150;
                 int ants = 50;
 
-                List<ACOConnection> acoPath = this.GenerateACOPath(iterationsMax, ants, allGoalWaypoints.ToArray(), allWaypointConnections, sInfo.Start, ACOMaxPathLength);
+                /// Create ACOConnection list between each goal location
+                List<ACOConnection> goalACOConnections = new List<ACOConnection>();
+                foreach (GameObject goal in sInfo.Goals)
+                {
+                    foreach (GameObject j in sInfo.Goals)
+                    {
+                        // If j isn't equal to current goal, add as a connection
+                        if (goal != j) 
+                        {
+                            /// Set ACO From and To
+                            ACOConnection acoConnection = new ACOConnection();
+                            acoConnection.SetConnection(goal, j, 1.0f);
 
-                aware.SetMovePath(acoPath);
+                            /// Query A* navigate to see if route is possible 
+                            List<Connection> aStarRoute = this.Navigate(acoConnection.FromNode, acoConnection.ToNode);
+                            if (aStarRoute != null && aStarRoute.Count > 0)
+                            {
+                                /// Is a A* route, set and add
+                                acoConnection.SetAStarRoute(aStarRoute);
+                                goalACOConnections.Add(acoConnection);
+                            }
+                            else
+                            {
+                                Debug.LogError($"Unable to generate an A* path between '{goal.name}' and '{j.name}'");
+                            }
+                        }
+                    }
+                }
 
-                m_setPath = acoPath;
+                // Do ACO Now?
+                List<ACOConnection> route = this.GenerateACOPath(iterationsMax, ants, m_allWaypoints.ToArray(), goalACOConnections, sInfo.Start, ACOMaxPathLength);
+
+                // Set this squirrel to move along ACO path
+                aware.SetMovePath(sInfo.Start, route);
+                
+                // Set Gizmo path for highlighting in Editor
+                m_gizmoPath = goalACOConnections;
             }
         }
     }
@@ -100,29 +124,6 @@ public class Part3_SceneController : ACOSceneController
             allObjs.Add(last.ToNode);
 
         return allObjs; 
-    }
-
-    /// <summary>
-    /// Gets all goal waypoints in the current scene
-    /// </summary>
-    /// <returns></returns>
-    private List<GameObject> GetAllSceneGoalWaypoints()
-    {
-        List<GameObject> goalWaypoints = new List<GameObject>();
-
-        // Find all the waypoints in the level.
-        GameObject[] allWaypoints = GameObject.FindGameObjectsWithTag(WAYPOINT_TAG);
-        foreach (GameObject waypoint in allWaypoints)
-        {
-            WaypointCON tmpWaypointCon = waypoint.GetComponent<WaypointCON>();
-            if (tmpWaypointCon)
-            {
-                // Add waypoint if it is a goal
-                if (tmpWaypointCon.WaypointType == WaypointCON.waypointPropsList.Goal)
-                    goalWaypoints.Add(waypoint);
-            }
-        }
-        return goalWaypoints;
     }
 
     /// <summary>

@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections.Generic;
 
 public class ACOConnection
 {
@@ -34,6 +35,13 @@ public class ACOConnection
         get { return m_toNode; }
     }
 
+    private List<Connection> m_route;
+    //The A* route between from node and to node
+    public List<Connection> Route
+    {
+        get { return m_route; }
+    }
+
     public ACOConnection()
     {
 
@@ -48,5 +56,10 @@ public class ACOConnection
 
         PheromoneLevel = defaultPheromoneLevel;
         PathProbability = 0;
+    }
+
+    public void SetAStarRoute(List<Connection> route)
+    {
+        m_route = route;
     }
 }

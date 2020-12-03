@@ -40,14 +40,9 @@ public class AwareSquirrel : MonoBehaviour
     /// </summary>
     private List<ACOConnection> m_connectionPath = null;
 
-    /// <summary>
-    /// Current target node to move toward
-    /// </summary>
-    private GameObject m_currentTargetNode = null;
-    /// <summary>
-    /// Current target node index in the connection drive path list
-    /// </summary>
-    private int m_currentTargetNodeIndex = 0;
+    private ACOConnection m_currentTargetACOConn = null;
+    private int m_currentTargetACOConnIndex = 0;
+    private int m_currentACOConnRouteIndex = 0;
 
     /// <summary>
     /// Amount of rotation to apply to model when setting look at rotation
@@ -81,40 +76,54 @@ public class AwareSquirrel : MonoBehaviour
 
     void Update()
     {
-        if (m_currentTargetNode)
+        if (m_currentTargetACOConn != null)
         {
-            // Do target node look at if target is valid
-            PerformLookAt(m_currentTargetNode.transform);
-
+            GameObject targetNodeObj = m_currentTargetACOConn.Route[m_currentACOConnRouteIndex].ToNode;
+            /// Look at next target node
+            PerformLookAt(targetNodeObj.transform);
+            
             if (!IsWaiting)
             {
-                // Move Truck towards next connection
-                PerformMovement();
+                /// if not waiting, move toward next route node
+                PerformMovementTo(targetNodeObj.transform.position);
 
-                // If nearly reached destination
-                float nextNodeDistance = Vector3.Distance(transform.position, m_currentTargetNode.transform.position);
+                /// Check if agent reached next route node
+                float nextNodeDistance = Vector3.Distance(transform.position, targetNodeObj.transform.position);
                 if (nextNodeDistance < DESTINATION_TOLERANCE)
                 {
-                    // Increment and set new target game object
-                    m_currentTargetNodeIndex++;
-
-                    // Move target node to next node index
-                    if (m_currentTargetNodeIndex > 0 && m_currentTargetNodeIndex < m_connectionPath.Count)
+                    /// Reached next route node, increment to next route node or to new ACOConnection
+                    m_currentACOConnRouteIndex++;
+                    if (m_currentACOConnRouteIndex >= m_currentTargetACOConn.Route.Count)
                     {
-                        ACOConnection currentTargetConnection = m_connectionPath[m_currentTargetNodeIndex];
-                        m_currentTargetNode = currentTargetConnection.ToNode;
+                        m_currentACOConnRouteIndex = 0;
+                        
+                        m_currentTargetACOConnIndex++;
+                        /// Check if reached end of ACOConnection path
+                        if (m_currentTargetACOConnIndex >= m_connectionPath.Count)
+                        {
+                            ACOConnection finalConnection = m_connectionPath[m_connectionPath.Count - 1];
+                            OnReachedPathEnd?.Invoke(this, finalConnection.ToNode);
 
-                        OnTravelNewConnection?.Invoke(this, currentTargetConnection);
-                    }
-                    else
-                    {
-                        //Debug.LogError("TargetNodeIndex is out of bounds!");
+                            m_ui.SetStatusText($"Finished path to '{finalConnection.ToNode.name}'");
+                            ResetPath();
+
+                            return;
+                        }
+                        else
+                        {
+                            /// Continue moving through ACOConnection path if not at end
+                            m_currentTargetACOConn = m_connectionPath[m_currentTargetACOConnIndex];
+
+                            OnTravelNewConnection?.Invoke(this, m_currentTargetACOConn);
+                            return;
+                        }
                     }
                 }
 
-                // Check if reached final node yet
+
+                // Check if agent reached final ACOConnection node
                 float finalNodeDistance = Vector3.Distance(transform.position, m_connectionPath[m_connectionPath.Count - 1].ToNode.transform.position);
-                if (finalNodeDistance < DESTINATION_TOLERANCE && m_currentTargetNodeIndex >= m_connectionPath.Count)
+                if (finalNodeDistance < DESTINATION_TOLERANCE && m_currentTargetACOConnIndex >= m_connectionPath.Count)
                 {
                     // Invoke event for reached path end and remove target
                     ACOConnection finalConnection = m_connectionPath[m_connectionPath.Count - 1];
@@ -133,7 +142,7 @@ public class AwareSquirrel : MonoBehaviour
     /// Drives the  along a certain connection path
     /// </summary>
     /// <param name="connectionPath">List of connections to drive along</param>
-    public void SetMovePath(List<ACOConnection> acoConnections)
+    public void SetMovePath(GameObject start, List<ACOConnection> acoConnections)
     {
         if (acoConnections == null || acoConnections != null && acoConnections.Count <= 0)
         {
@@ -144,20 +153,21 @@ public class AwareSquirrel : MonoBehaviour
         m_connectionPath = acoConnections;
         Debug.Log($"Squirrel '{this.name}' path set! '{m_connectionPath.Count}' connections");
 
-        if (m_currentTargetNode == null)
-        {
-            // Set Truck position from first FromNode and target to ToNode
-            this.transform.position = m_connectionPath[m_currentTargetNodeIndex].FromNode.transform.position;
-            m_currentTargetNode = m_connectionPath[m_currentTargetNodeIndex].ToNode;
+        /// Set movement vars to default values
+        m_currentTargetACOConnIndex = 0;
+        m_currentACOConnRouteIndex = 0;
+        m_currentTargetACOConn = m_connectionPath[m_currentTargetACOConnIndex];
 
-            m_ui.SetStatusText($"New Path: Moving to '{m_connectionPath[m_connectionPath.Count - 1].ToNode.name}'");
-        }
+        /// Set start position for agent
+        this.transform.position = m_currentTargetACOConn.Route[m_currentACOConnRouteIndex].FromNode.transform.position;
+
+        m_ui.SetStatusText($"New Path: Moving to '{m_connectionPath[m_connectionPath.Count - 1].ToNode.name}'");
     }
 
     /// <summary>
     /// Update loop to perform the truck's movement to the next target node
     /// </summary>
-    private void PerformMovement()
+    private void PerformMovementTo(Vector3 targetPosition)
     {
         // Calculate speed reduction from Cargo
         float totalPackageSpeedReduction = CalculateCargoSpeedReduction();
@@ -167,7 +177,7 @@ public class AwareSquirrel : MonoBehaviour
         float step = currentCargoSpeed * Time.deltaTime;
 
         // Move towards destination with offset
-        Vector3 stepVector = Vector3.MoveTowards(this.transform.position, m_currentTargetNode.transform.position, step);
+        Vector3 stepVector = Vector3.MoveTowards(this.transform.position, targetPosition, step);
         this.transform.position = stepVector;
     }
 
@@ -205,7 +215,7 @@ public class AwareSquirrel : MonoBehaviour
     {
         if (!IsWaiting)
         {
-            m_ui.SetStatusText($"Waiting at '{m_connectionPath[m_currentTargetNodeIndex].FromNode.name}'");
+            m_ui.SetStatusText($"Waiting at '{m_connectionPath[m_currentTargetACOConnIndex].FromNode.name}'");
         }
 
         IsWaiting = true;
@@ -225,12 +235,13 @@ public class AwareSquirrel : MonoBehaviour
     }
 
     /// <summary>
-    /// Resets the truck's current drive path
+    /// Resets the agent's current drive path
     /// </summary>
     private void ResetPath()
     {
         m_connectionPath = null;
-        m_currentTargetNode = null;
-        m_currentTargetNodeIndex = 0;
+        m_currentTargetACOConn = null;
+        m_currentTargetACOConnIndex = 0;
+        m_currentACOConnRouteIndex = 0;
     }
 }

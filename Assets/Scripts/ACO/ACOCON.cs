@@ -9,19 +9,44 @@ public class ACOCON
         get { return m_defaultPheromone; }
     }
 
-    private float Alpha = 1.0f;
-    private float Beta = 0.0001f;
+    private float Alpha = DEFAULT_ALPHA;
+    private float Beta = DEFAULT_BETA;
 
-    private float EvaporationFactor = 0.5f;
-    private float Q = 0.0006f;
+    private float EvaporationFactor = DEFAULT_EVAPORATION_FACTOR;
+    private float Q = DEFAULT_Q;
 
     private List<ACOAnt> Ants = new List<ACOAnt>();
 
     private List<ACOConnection> MyRoute = new List<ACOConnection>();
 
+    public static float DEFAULT_ALPHA = 1.0f;
+    public static float DEFAULT_BETA = 0.0001f;
+    public static float DEFAULT_EVAPORATION_FACTOR = 0.5f;
+    public static float DEFAULT_Q = 0.0006f;
+
     public ACOCON()
     {
 
+    }
+
+    public void SetAlpha(float a)
+    {
+        Alpha = a;
+    }
+
+    public void SetBeta(float b)
+    {
+        Beta = b;
+    }
+
+    public void SetEvaporationFactor(float evapFactor)
+    {
+        EvaporationFactor = evapFactor;
+    }
+
+    public void SetQ(float q)
+    {
+        Q = q;
     }
 
     /*

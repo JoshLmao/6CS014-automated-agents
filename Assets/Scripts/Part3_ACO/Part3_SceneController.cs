@@ -6,6 +6,22 @@ using UnityEngine;
 public class Part3_SceneController : ACOSceneController
 {
     [System.Serializable]
+    public class ACOConfig
+    {
+        [Tooltip("Amount of Alpha to use in Ant Colony Optimization")]
+        public float Alpha = ACOCON.DEFAULT_ALPHA;
+        [Tooltip("Amount of Beta to use in Ant Colony Optimization")]
+        public float Beta = ACOCON.DEFAULT_BETA;
+        [Tooltip("Evaporation factor value to use in Ant Colony Optimization")]
+        public float EvaporationFactor = ACOCON.DEFAULT_EVAPORATION_FACTOR;
+        [Tooltip("Amount of Q to use in Ant Colony Optimization")]
+        public float Q = ACOCON.DEFAULT_Q;
+
+        [Tooltip("Maximum length of path in Ant Colony Optimization")]
+        public int MaxPathLength = 15;
+    }
+
+    [System.Serializable]
     public class SquirrelInfo
     {
         public GameObject SquirrelPrefab;
@@ -13,11 +29,11 @@ public class Part3_SceneController : ACOSceneController
         public List<GameObject> Goals;
     }
 
+    public ACOConfig AntColonyConfig = new ACOConfig();
+
     public List<SquirrelInfo> SquirrelsInfo = new List<SquirrelInfo>();
 
-    public int ACOMaxPathLength = 10;
-
-    [SerializeField]
+    [SerializeField, Tooltip("Parent transform to instantiate new squirrels under")]
     private Transform m_squirrelParent = null;
 
     private List<GameObject> m_instantiatedSquirrels = new List<GameObject>();
@@ -30,6 +46,11 @@ public class Part3_SceneController : ACOSceneController
     protected override void Start()
     {
         base.Start();
+
+        if (AntColonyConfig != null)
+        {
+            this.ConfigureACO(AntColonyConfig.Alpha, AntColonyConfig.Beta, AntColonyConfig.EvaporationFactor, AntColonyConfig.Q);
+        }
 
         InitSquirrels();
     }
@@ -101,7 +122,7 @@ public class Part3_SceneController : ACOSceneController
                 }
 
                 // Do ACO Now?
-                List<ACOConnection> route = this.GenerateACOPath(iterationsMax, ants, m_allWaypoints.ToArray(), goalACOConnections, sInfo.Start, ACOMaxPathLength);
+                List<ACOConnection> route = this.GenerateACOPath(iterationsMax, ants, m_allWaypoints.ToArray(), goalACOConnections, sInfo.Start, AntColonyConfig.MaxPathLength);
 
                 // Set this squirrel to move along ACO path
                 aware.SetMovePath(sInfo.Start, route);

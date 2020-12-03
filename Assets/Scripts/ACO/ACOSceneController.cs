@@ -13,12 +13,20 @@ public class ACOSceneController : AStarSceneController
 
     void Start()
     {
-        
+
     }
 
     void Update()
     {
         
+    }
+
+    protected void ConfigureACO(float alpha = 1.0f, float beta = 0.0001f, float evaporationFactor = 0.5f, float q = 0.0006f)
+    {
+        m_acoCon.SetAlpha(alpha);
+        m_acoCon.SetBeta(beta);
+        m_acoCon.SetEvaporationFactor(evaporationFactor);
+        m_acoCon.SetQ(q);
     }
 
     protected List<ACOConnection> GenerateACOPath(int iterationThreshold, int totalNumAnts, GameObject[] waypointNodes, List<ACOConnection> connections, GameObject startNode, int maxPathLength)

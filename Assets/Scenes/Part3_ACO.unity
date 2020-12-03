@@ -1212,6 +1212,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: db1f15cc9184a8e41b8977fc75b3cdee, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  AntColonyConfig:
+    Alpha: 1
+    Beta: 0.0001
+    EvaporationFactor: 0.5
+    Q: 0.0006
+    MaxPathLength: 15
   SquirrelsInfo:
   - SquirrelPrefab: {fileID: 8355690077806323688, guid: bc5e1b6c90cd7fc41974cbb45f86888d, type: 3}
     Start: {fileID: 610166456}
@@ -1219,7 +1225,12 @@ MonoBehaviour:
     - {fileID: 380629857}
     - {fileID: 1680374116}
     - {fileID: 610166456}
-  ACOMaxPathLength: 60
+  - SquirrelPrefab: {fileID: 8355690077806323688, guid: bc5e1b6c90cd7fc41974cbb45f86888d, type: 3}
+    Start: {fileID: 458566945}
+    Goals:
+    - {fileID: 1776908630}
+    - {fileID: 1776006783}
+    - {fileID: 458566945}
   m_squirrelParent: {fileID: 1974338648}
 --- !u!1001 &867131803
 PrefabInstance:

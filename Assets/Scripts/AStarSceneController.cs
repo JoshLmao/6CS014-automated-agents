@@ -60,7 +60,7 @@ public class AStarSceneController : MonoBehaviour
     /// <param name="start">The start waypoint gameobject</param>
     /// <param name="end">The end waypoint gameobject</param>
     /// <returns>If the AStar path was able to determine a path</returns>
-    protected List<Connection> Navigate(GameObject start, GameObject end)
+    protected List<Connection> NavigateAStar(GameObject start, GameObject end)
     {
         /// Validate start and end are legit
         if (start == null || end == null)

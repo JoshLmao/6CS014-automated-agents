@@ -68,7 +68,7 @@ public class Part2_SceneController : AStarSceneController
             
             if (p2Truck)
             {
-                List<Connection> connetionPath = this.Navigate(info.Start, info.End);
+                List<Connection> connetionPath = this.NavigateAStar(info.Start, info.End);
 
                 if (connetionPath != null)
                 {
@@ -206,7 +206,7 @@ public class Part2_SceneController : AStarSceneController
         yield return new WaitForSeconds(seconds);
 
         // Truck has arrived at destined End point, make it travel back
-        List<Connection> navPath = this.Navigate(start, end);
+        List<Connection> navPath = this.NavigateAStar(start, end);
         if (navPath != null)
         {
             truck.DriveAlong(navPath);

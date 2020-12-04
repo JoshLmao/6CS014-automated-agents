@@ -168,10 +168,10 @@ public class ACOCON
         MyRoute = GenerateRoute(StartNode, MaxPathLength, Connections);
 
         // Output connections and Pheromone to the log.
-        LogAnts();
+        //LogAnts();
         LogMyRoute(MyRoute);
         //LogRoute(StartNode, MaxPathLength, WaypointNodes, Connections);
-        LogConnections(Connections);
+        //LogConnections(Connections);
         
 
         return MyRoute;

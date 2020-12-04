@@ -41,7 +41,7 @@ public class Part1_SceneController : AStarSceneController
         }
 
         /// Navigate a path from start to end waypoints
-        List<Connection> connectionPath = this.Navigate(StartWaypoint, DeliveryDestination);
+        List<Connection> connectionPath = this.NavigateAStar(StartWaypoint, DeliveryDestination);
         if (connectionPath == null)
         {
             Debug.LogError("Unable to find a path to destination");
@@ -94,7 +94,7 @@ public class Part1_SceneController : AStarSceneController
         yield return new WaitForSeconds(seconds);
 
         // Determine and set a new drive path for Truck
-        List<Connection> returnPath = this.Navigate(start, end);
+        List<Connection> returnPath = this.NavigateAStar(start, end);
         m_truck.DriveAlong(returnPath);
     }
 }

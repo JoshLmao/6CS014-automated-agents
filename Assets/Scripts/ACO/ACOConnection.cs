@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 
-public class ACOConnection
+public class ACOConnection : IConnection
 {
     private float m_distance = 0;
     public float Distance

@@ -26,27 +26,36 @@ public class Part3_SceneController : ACOSceneController
     }
 
     [System.Serializable]
-    public class SquirrelInfo
+    public class AgentInfo
     {
-        [Tooltip("Prefab to use as the squirrel")]
-        public GameObject SquirrelPrefab;
+        [Tooltip("Prefab model to use as the agent")]
+        public GameObject AgentPrefab;
         [Tooltip("Start waypoint the agent will start from. Needs to be one of the goals")]
         public GameObject Start;
         [Tooltip("List of goals the agent will navigate through")]
         public List<GameObject> Goals;
     }
 
+    /// <summary>
+    /// Config values for Ant Colony Optimization to be edited in the inspector
+    /// </summary>
     public ACOConfig AntColonyConfig = new ACOConfig();
+    /// <summary>
+    /// List of agent info to be edited in inspector
+    /// </summary>
+    public List<AgentInfo> AgentsInfo = new List<AgentInfo>();
 
-    public List<SquirrelInfo> SquirrelsInfo = new List<SquirrelInfo>();
+    [SerializeField, Tooltip("Parent transform to instantiate new agents under")]
+    private Transform m_agentParent = null;
 
-    [SerializeField, Tooltip("Parent transform to instantiate new squirrels under")]
-    private Transform m_squirrelParent = null;
+    /// <summary>
+    /// List of agents instantiated by the scene controller
+    /// </summary>
+    private List<GameObject> m_instantiatedAgents = new List<GameObject>();
 
-    /// list of squirrels instantiated by the scene controller
-    private List<GameObject> m_instantiatedSquirrels = new List<GameObject>();
-
+    /// <summary>
     /// Path to draw in gizmos for debugging
+    /// </summary>
     private List<ACOConnection> m_gizmoPath = null;
 
     #region MonoBehaviours
@@ -60,8 +69,8 @@ public class Part3_SceneController : ACOSceneController
             this.ConfigureACO(AntColonyConfig.Alpha, AntColonyConfig.Beta, AntColonyConfig.EvaporationFactor, AntColonyConfig.Q);
         }
 
-        /// Create squirrel agents
-        InitSquirrels();
+        /// Create agents
+        InitAgents();
     }
 
     // Draws debug objects in the editor and during editor play (if option set).
@@ -79,45 +88,55 @@ public class Part3_SceneController : ACOSceneController
     }
     #endregion
 
-    private void InitSquirrels()
+    private void InitAgents()
     {
         /// Iterate over each SquirrelInfo and configure
-        foreach(SquirrelInfo sInfo in SquirrelsInfo)
+        foreach(AgentInfo truckInfo in AgentsInfo)
         {
-            if (sInfo.SquirrelPrefab == null || sInfo.Start == null)
+            if (truckInfo.AgentPrefab == null || truckInfo.Start == null)
             {
                 Debug.LogError($"SquirrelInfo is incorrectly configured!");
                 continue;
             }
 
             /// instantiate the squirrel and add to list
-            GameObject inst = Instantiate(sInfo.SquirrelPrefab, m_squirrelParent);
-            m_instantiatedSquirrels.Add(inst);
+            GameObject inst = Instantiate(truckInfo.AgentPrefab, m_agentParent);
+            m_instantiatedAgents.Add(inst);
 
             /// Get the Aware component and listen to events and set move path
-            AwareSquirrel aware = inst.GetComponent<AwareSquirrel>();
-            if (aware)
+            ACOTruck acoTruck = inst.GetComponent<ACOTruck>();
+            if (acoTruck)
             {
                 /// Create ACOConnection list between each goal location
-                List<ACOConnection> goalACOConnections = CalculateGoalsAndRoutes(sInfo.Goals);
+                List<ACOConnection> goalACOConnections = CalculateGoalsAndRoutes(truckInfo.Goals);
+
+                /// Get the closest ACO goal node to use as start
+                GameObject acoPathFirstNode = GetClosestACOGoalNodeToPosition(goalACOConnections, truckInfo.Start.transform.position);
 
                 // Calculate ACO path from all waypoints, using the ACOConnections generated
                 List<ACOConnection> route = this.GenerateACOPath(AntColonyConfig.MaximumIterations, 
                                                                     AntColonyConfig.Ants, 
                                                                     m_allWaypoints.ToArray(), 
-                                                                    goalACOConnections, 
-                                                                    sInfo.Start, 
+                                                                    goalACOConnections,
+                                                                    acoPathFirstNode,
                                                                     AntColonyConfig.MaxPathLength);
 
-                // Set this squirrel to move along ACO path
-                aware.SetMovePath(sInfo.Start, route);
+                /// Get last ACO node to calculate A* path back to target start position
+                GameObject acoPathLastNode = route.LastOrDefault().ToNode;
+
+                /// A* calculate paths from start to ACO start, and from ACO end to start
+                List<Connection> startToACOStart = this.NavigateAStar(truckInfo.Start, acoPathFirstNode);
+                List<Connection> acoEndToStart = this.NavigateAStar(acoPathLastNode, truckInfo.Start);
+
+                /// Set this agent to move along ACO path
+                acoTruck.SetMovePath(startToACOStart, route, acoEndToStart);
                 
-                // Set Gizmo path for highlighting in Editor
+                /// Set Gizmo path for highlighting in Editor
                 m_gizmoPath = goalACOConnections;
             }
             else
             {
-                Debug.LogError("Squirrel Prefab is missing AwareSquirrel script!");
+                Debug.LogError($"Missing ACOTruck script on Prefab '{truckInfo.AgentPrefab.name}'!");
             }
         }
     }
@@ -152,7 +171,7 @@ public class Part3_SceneController : ACOSceneController
                     acoConnection.SetConnection(goal, j, 1.0f);
 
                     /// Query A* navigate to see if route is possible 
-                    List<Connection> aStarRoute = this.Navigate(acoConnection.FromNode, acoConnection.ToNode);
+                    List<Connection> aStarRoute = this.NavigateAStar(acoConnection.FromNode, acoConnection.ToNode);
                     if (aStarRoute != null && aStarRoute.Count > 0)
                     {
                         /// Is a A* route, set and add
@@ -189,5 +208,28 @@ public class Part3_SceneController : ACOSceneController
             }
         }
         return connections;
+    }
+
+    /// <summary>
+    /// Finds the closest ACO goal node to the agent's location
+    /// </summary>
+    /// <param name="acoGoalConnections">List of ACO goal connections </param>
+    /// <param name="agentPosition">The world position</param>
+    /// <returns></returns>
+    private GameObject GetClosestACOGoalNodeToPosition(List<ACOConnection> acoGoalConnections, Vector3 position)
+    {
+        GameObject closest = null;
+        float lastDist = float.MaxValue;
+        foreach(ACOConnection conn in acoGoalConnections)
+        {
+            float dist = Vector3.Distance(conn.FromNode.transform.position, position);
+            if (dist < lastDist)
+            {
+                closest = conn.FromNode;
+                lastDist = dist;
+            }
+        }
+
+        return closest;
     }
 }

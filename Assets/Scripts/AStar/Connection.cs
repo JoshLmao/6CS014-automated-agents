@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Connection
+public class Connection : IConnection
 {
     private float m_cost = 0f;
     public float Cost

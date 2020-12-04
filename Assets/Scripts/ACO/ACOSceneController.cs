@@ -11,16 +11,6 @@ public class ACOSceneController : AStarSceneController
         get { return m_acoCon.DefaultPheromone; }
     }
 
-    void Start()
-    {
-
-    }
-
-    void Update()
-    {
-        
-    }
-
     protected void ConfigureACO(float alpha = 1.0f, float beta = 0.0001f, float evaporationFactor = 0.5f, float q = 0.0006f)
     {
         m_acoCon.SetAlpha(alpha);

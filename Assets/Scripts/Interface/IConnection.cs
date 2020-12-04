@@ -1,9 +1,7 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public interface IConnection
 {
-    public GameObject FromNode;
-    public GameObject ToNode;
+    GameObject FromNode { get; }
+    GameObject ToNode { get; }
 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using System.Collections;
 
 public class ACOTruck : MonoBehaviour
 {
@@ -26,6 +27,10 @@ public class ACOTruck : MonoBehaviour
     /// Is the Agent waiting for another to pass?
     /// </summary>
     public bool IsWaiting = false;
+    /// <summary>
+    /// Is the agent delivering a parcel?
+    /// </summary>
+    public bool IsDelivering = false;
 
     /// <summary>
     /// Event for when the aware agent truck finished travelling a connection and starts towards another
@@ -38,11 +43,27 @@ public class ACOTruck : MonoBehaviour
     /// GameObject of destination waypoint
     /// </summary>
     public event Action<ACOTruck, GameObject> OnReachedPathEnd;
+    /// <summary>
+    /// Event for when agent reaches an ACO goal
+    /// </summary>
+    public event Action<ACOTruck, GameObject> OnReachedGoal;
 
+    /// <summary>
+    /// A* path from Agent Start to ACO start
+    /// </summary>
     private List<Connection> m_startToACOPath = null;
+    /// <summary>
+    /// Navigation Info for moving along the startToACOPath A* path
+    /// </summary>
     private NavigateToInfo m_startToACONavInfo = null;
 
+    /// <summary>
+    /// A* path from the end of ACO to the agent start
+    /// </summary>
     private List<Connection> m_acoToStartPath = null;
+    /// <summary>
+    /// Navigation Info for moving along the acoToStartPath A* path
+    /// </summary>
     private NavigateToInfo m_acoToStartNavInfo = null;
 
     /// <summary>
@@ -50,11 +71,23 @@ public class ACOTruck : MonoBehaviour
     /// </summary>
     private List<ACOConnection> m_acoConnectionPath = null;
 
+    /// <summary>
+    /// Current ACOConnection to navigate along during ACO path stage
+    /// </summary>
     private ACOConnection m_currentTargetACOConn = null;
+    /// <summary>
+    /// Current ACOConnection index to navigate along
+    /// </summary>
     private int m_currentTargetACOConnIndex = 0;
+    /// <summary>
+    /// Current ACOConnection Route index to navigate to
+    /// </summary>
     private int m_currentACOConnRouteIndex = 0;
 
-    private NavigationTarget m_currentDrivePathTarget = NavigationTarget.StartToACO;
+    /// <summary>
+    /// Current stage of movement for agent
+    /// </summary>
+    private NavigationTarget m_currentDrivePathTarget = NavigationTarget.None;
 
     /// <summary>
     /// Amount of rotation to apply to model when setting look at rotation
@@ -87,6 +120,7 @@ public class ACOTruck : MonoBehaviour
 
     void Update()
     {
+        /// Navigate on the correct path depending on the current path target
         switch(m_currentDrivePathTarget)
         {
             case NavigationTarget.StartToACO:
@@ -122,12 +156,15 @@ public class ACOTruck : MonoBehaviour
                 {
                     /// Set drive path to ACO, the next path
                     m_currentDrivePathTarget = NavigationTarget.ACO;
-                    Debug.Log("Completed A* Navigation. Proceeding with ACO path...");
+                    Debug.Log($"Agent '{this.gameObject.name}' completed A* Navigation. Proceeding with ACO path...");
                 }
                 else
                 {
                     /// Set next to node if inside range
-                    m_startToACONavInfo.TargetNode = m_startToACOPath[m_startToACONavInfo.TargetIndex].ToNode;
+                    Connection nextConn = m_startToACOPath[m_startToACONavInfo.TargetIndex];
+                    OnTravelNewConnection?.Invoke(this, nextConn);
+                    
+                    m_startToACONavInfo.TargetNode = nextConn.ToNode;
                 }
             }
         }
@@ -166,12 +203,16 @@ public class ACOTruck : MonoBehaviour
                             m_ui.SetStatusText($"Finished path to '{finalConnection.ToNode.name}'");
 
                             m_currentDrivePathTarget = NavigationTarget.ACOToStart;
-                            Debug.Log("Finished ACO path. Navigating A* path to Start");
+                            Debug.Log($"Agent '{this.name}' finished ACO path. Navigating A* path to Start");
 
                             return;
                         }
                         else
                         {
+                            //Debug.Log($"Reached ACO goal {m_currentTargetACOConn.ToNode.name}");
+
+                            OnReachedGoal?.Invoke(this, m_currentTargetACOConn.ToNode);
+
                             /// Continue moving through ACOConnection path if not at end
                             m_currentTargetACOConn = m_acoConnectionPath[m_currentTargetACOConnIndex];
 
@@ -200,14 +241,21 @@ public class ACOTruck : MonoBehaviour
                 /// Check if index is more or equal to path length
                 if (m_acoToStartNavInfo.TargetIndex >= m_acoToStartPath.Count)
                 {
+                    /// Finished all paths, reset and sleep
                     m_currentDrivePathTarget = NavigationTarget.None;
-                    /// Set drive path to ACO, the next path
-                    Debug.Log("Completed A* navigation from ACO to Start");
+                    //Debug.Log($"Agent '{this.name}' completed A* navigation from ACO to Start");
+
+                    ResetPath();
+
+                    m_ui.SetStatusText("Finished and returned home. Sleeping (zzz)");
                 }
                 else
                 {
                     /// Set next to node if inside range
-                    m_acoToStartNavInfo.TargetNode = m_acoToStartPath[m_acoToStartNavInfo.TargetIndex].ToNode;
+                    Connection nextConn = m_acoToStartPath[m_acoToStartNavInfo.TargetIndex];
+                    OnTravelNewConnection?.Invoke(this, nextConn);
+
+                    m_acoToStartNavInfo.TargetNode = nextConn.ToNode;
                 }
             }
         }
@@ -217,10 +265,11 @@ public class ACOTruck : MonoBehaviour
     {
         PerformLookAt(targetNode.transform);
 
-        if (!IsWaiting)
-        {
-            PerformMovementTo(targetNode.transform.position);
-        }
+        /// Check if agent is waiting or delivering, dont continue if so
+        if (IsDelivering || IsWaiting)
+            return;
+
+        PerformMovementTo(targetNode.transform.position);
     }
 
     /// <summary>
@@ -343,6 +392,27 @@ public class ACOTruck : MonoBehaviour
     }
 
     /// <summary>
+    /// Deliveres a package from the cargo after a wait
+    /// </summary>
+    public void DeliverPackage()
+    {
+        StartCoroutine(DeliveryWait(3f));
+    }
+
+    private IEnumerator DeliveryWait(float seconds)
+    {
+        IsDelivering = true;
+
+        yield return new WaitForSeconds(seconds);
+
+        Debug.Log($"Agent '{this.gameObject.name}' delivered package");
+        Cargo.RemovePackages(1);
+
+        m_ui.SetCargoAmount(Cargo.PackageCount);
+        IsDelivering = false;
+    }
+
+    /// <summary>
     /// Resets the agent's current drive path
     /// </summary>
     private void ResetPath()
@@ -351,6 +421,9 @@ public class ACOTruck : MonoBehaviour
         m_currentTargetACOConn = null;
         m_currentTargetACOConnIndex = 0;
         m_currentACOConnRouteIndex = 0;
+        m_startToACOPath = null;
+        m_startToACONavInfo = null;
+        m_acoToStartPath = null;
+        m_acoToStartNavInfo = null;
     }
-
 }

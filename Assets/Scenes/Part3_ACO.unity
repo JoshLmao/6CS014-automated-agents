@@ -3798,6 +3798,7 @@ MonoBehaviour:
     MaxPathLength: 70
   AgentsInfo:
   - AgentPrefab: {fileID: 3047253241800856313, guid: 9989d37aa19143b448e06172ecc0476e, type: 3}
+    CargoAmount: 6
     Start: {fileID: 1548764879}
     Goals:
     - {fileID: 551678133}
@@ -3805,7 +3806,8 @@ MonoBehaviour:
     - {fileID: 1812959165}
     - {fileID: 609620210}
     - {fileID: 626856989}
-  - AgentPrefab: {fileID: 3047253241800856313, guid: 9989d37aa19143b448e06172ecc0476e, type: 3}
+  - AgentPrefab: {fileID: 3047253241800856313, guid: dffddec7f97ad144bbfcafd8843d637f, type: 3}
+    CargoAmount: 7
     Start: {fileID: 8399841}
     Goals:
     - {fileID: 192205878}
@@ -3813,6 +3815,15 @@ MonoBehaviour:
     - {fileID: 211192151}
     - {fileID: 1779599837}
     - {fileID: 1542926990}
+  - AgentPrefab: {fileID: 3091525475324817845, guid: 206ff6fa8bb93c2479fe642b8acd9932, type: 3}
+    CargoAmount: 9
+    Start: {fileID: 1789139410}
+    Goals:
+    - {fileID: 789561459}
+    - {fileID: 635749999}
+    - {fileID: 835435858}
+    - {fileID: 2104773784}
+    - {fileID: 687708739}
   m_agentParent: {fileID: 1974338648}
 --- !u!1001 &835435857
 PrefabInstance:

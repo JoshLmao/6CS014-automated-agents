@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 public class Part3_SceneController : ACOSceneController
 {
@@ -30,6 +31,8 @@ public class Part3_SceneController : ACOSceneController
     {
         [Tooltip("Prefab model to use as the agent")]
         public GameObject AgentPrefab;
+        [Tooltip("Amount of cargo for Agent to start with")]
+        public int CargoAmount;
         [Tooltip("Start waypoint the agent will start from. Needs to be one of the goals")]
         public GameObject Start;
         [Tooltip("List of goals the agent will navigate through")]
@@ -54,6 +57,11 @@ public class Part3_SceneController : ACOSceneController
     private List<GameObject> m_instantiatedAgents = new List<GameObject>();
 
     /// <summary>
+    /// List of active trucks and their current travel to connection
+    /// </summary>
+    private Dictionary<ACOTruck, IConnection> m_currentTruckConnections = new Dictionary<ACOTruck, IConnection>();
+
+    /// <summary>
     /// Path to draw in gizmos for debugging
     /// </summary>
     private List<ACOConnection> m_gizmoPath = null;
@@ -71,6 +79,77 @@ public class Part3_SceneController : ACOSceneController
 
         /// Create agents
         InitAgents();
+    }
+
+    public void Update()
+    {
+        if (m_currentTruckConnections.Count > 0)
+        {
+            /// For each truck and it's current connection
+            foreach (KeyValuePair<ACOTruck, IConnection> thisKvp in m_currentTruckConnections)
+            {
+                /// Compare waypoint names to check if they are the same
+                KeyValuePair<ACOTruck, IConnection> matchingKvp = m_currentTruckConnections
+                    .FirstOrDefault(kvp => kvp.Value.ToNode.name == thisKvp.Value.ToNode.name && kvp.Key.name != thisKvp.Key.name);
+                ACOTruck truckOne = thisKvp.Key;
+                ACOTruck truckTwo = matchingKvp.Key;
+
+                /// If current iterarte truck is waiting, check if they can resume
+                /// Only check truck one as the others will be checked next iteration
+                if (truckOne.IsWaiting)
+                {
+                    List<ACOTruck> waitingTrucks = new List<ACOTruck>();
+                    bool isOnSameConnection = false;
+                    foreach (KeyValuePair<ACOTruck, IConnection> checkKvp in m_currentTruckConnections)
+                    {
+                        if (!checkKvp.Key.IsWaiting)
+                            continue;
+
+                        if (thisKvp.Value.ToNode.name == checkKvp.Value.ToNode.name)
+                        {
+                            //isOnSameConnection = true;
+                            waitingTrucks.Add(checkKvp.Key);
+                        }
+                    }
+
+                    // More than 1 truck waiting at same connection, resume first one in list
+                    if (waitingTrucks.Count > 1)
+                    {
+                        waitingTrucks[0].ResumeMovement();
+                        Debug.Log($"Resuming Truck '{waitingTrucks[0]}' in queue of '{waitingTrucks.Count}'");
+                    }
+                    // else if truckOne has no others waiting, resume
+                    else if (!isOnSameConnection)
+                    {
+                        truckOne.ResumeMovement();
+                        Debug.Log($"Resuming Truck '{truckOne.name}'");
+                    }
+                }
+
+                // Check match isn't null
+                if (matchingKvp.Key != null && matchingKvp.Value != null)
+                {
+                    /// If isn't waiting and connections are matching...
+                    bool eitherTruckWaiting = truckOne.IsWaiting || truckTwo.IsWaiting;
+                    if (!eitherTruckWaiting && thisKvp.Value.ToNode.name == matchingKvp.Value.ToNode.name)
+                    {
+                        if (truckOne.Cargo.PackageCount > truckTwo.Cargo.PackageCount)
+                        {
+                            ///truckOne is slower, pause it
+                            truckOne.PauseMovement();
+                            Debug.Log($"Pausing Truck '{truckOne.name};");
+                        }
+                        else
+                        {
+                            /// truckTwo is slower
+                            /// or cargo is same so prioritise truckTwo
+                            truckTwo.PauseMovement();
+                            Debug.Log($"Pausing Truck '{truckTwo.name}'");
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // Draws debug objects in the editor and during editor play (if option set).
@@ -107,6 +186,8 @@ public class Part3_SceneController : ACOSceneController
             ACOTruck acoTruck = inst.GetComponent<ACOTruck>();
             if (acoTruck)
             {
+                acoTruck.Cargo.AddPackages(truckInfo.CargoAmount);
+
                 /// Create ACOConnection list between each goal location
                 List<ACOConnection> goalACOConnections = CalculateGoalsAndRoutes(truckInfo.Goals);
 
@@ -130,7 +211,10 @@ public class Part3_SceneController : ACOSceneController
 
                 /// Set this agent to move along ACO path
                 acoTruck.SetMovePath(startToACOStart, route, acoEndToStart);
-                
+
+                acoTruck.OnTravelNewConnection += OnTruckTravelNewConnection;
+                acoTruck.OnReachedGoal += OnAgentReachedACOGoal;
+
                 /// Set Gizmo path for highlighting in Editor
                 m_gizmoPath = goalACOConnections;
             }
@@ -139,20 +223,6 @@ public class Part3_SceneController : ACOSceneController
                 Debug.LogError($"Missing ACOTruck script on Prefab '{truckInfo.AgentPrefab.name}'!");
             }
         }
-    }
-
-    private List<GameObject> GetAllWaypointsInConnection(List<Connection> conns)
-    {
-        List<GameObject> allObjs = new List<GameObject>();
-        foreach(Connection c in conns)
-        {
-            allObjs.Add(c.FromNode);
-        }
-        var last = conns.LastOrDefault();
-        if (last != null)
-            allObjs.Add(last.ToNode);
-
-        return allObjs; 
     }
 
     /// Generates ACOConnection list from the given goals and calculates an A* route between each
@@ -189,28 +259,6 @@ public class Part3_SceneController : ACOSceneController
     }
 
     /// <summary>
-    /// Creates ACO waypoints from the provided waypoints
-    /// </summary>
-    /// <param name="allWaypoints"></param>
-    /// <param name="defaultPheromone"></param>
-    /// <returns></returns>
-    private List<ACOConnection> GetConnectionsFromWaypoints(List<GameObject> allWaypoints, float defaultPheromone = 1.0f)
-    {
-        List<ACOConnection> connections = new List<ACOConnection>();
-        foreach (GameObject waypoint in allWaypoints)
-        {
-            WaypointCON tmpWaypointCon = waypoint.GetComponent<WaypointCON>();
-            foreach (GameObject WaypointConNode in tmpWaypointCon.Connections)
-            {
-                ACOConnection aConnection = new ACOConnection();
-                aConnection.SetConnection(waypoint, WaypointConNode, defaultPheromone);
-                connections.Add(aConnection);
-            }
-        }
-        return connections;
-    }
-
-    /// <summary>
     /// Finds the closest ACO goal node to the agent's location
     /// </summary>
     /// <param name="acoGoalConnections">List of ACO goal connections </param>
@@ -231,5 +279,23 @@ public class Part3_SceneController : ACOSceneController
         }
 
         return closest;
+    }
+
+    private void OnTruckTravelNewConnection(ACOTruck truck, IConnection nextTravelConnection)
+    {
+        // Update or add new connection to list
+        if (m_currentTruckConnections.ContainsKey(truck))
+        {
+            m_currentTruckConnections[truck] = nextTravelConnection;
+        }
+        else
+        {
+            m_currentTruckConnections.Add(truck, nextTravelConnection);
+        }
+    }
+
+    private void OnAgentReachedACOGoal(ACOTruck agent, GameObject arg2)
+    {
+        agent.DeliverPackage();
     }
 }

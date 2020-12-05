@@ -136,6 +136,51 @@ public class ACOTruck : MonoBehaviour
                 break;
         }
     }
+
+    /// <summary>
+    /// Only draw path gizmos if truck is selected
+    /// </summary>
+    private void OnDrawGizmosSelected()
+    {
+        Vector3 offset = new Vector3(0, 0.3f, 0);
+
+        /// Draw Start StartToACO path
+        if (m_startToACOPath != null && m_startToACOPath.Count > 0)
+        {
+            foreach (Connection aConn in m_startToACOPath)
+            {
+                Gizmos.color = Color.white;
+                Gizmos.DrawLine(aConn.FromNode.transform.position + offset, aConn.ToNode.transform.position + offset);
+            }
+        }
+
+        /// Draw last ACOToStart path
+        if (m_acoToStartPath != null && m_acoToStartPath.Count > 0)
+        {
+            foreach (Connection conn in m_acoToStartPath)
+            {
+                Gizmos.color = Color.white;
+                Gizmos.DrawLine(conn.FromNode.transform.position + offset, conn.ToNode.transform.position + offset);
+            }
+        }
+
+        /// Draw ACO direct line
+        if (m_acoConnectionPath != null && m_acoConnectionPath.Count > 0)
+        {
+            foreach (ACOConnection acoConn in m_acoConnectionPath)
+            {
+                Gizmos.color = Color.green;
+                Gizmos.DrawLine(acoConn.FromNode.transform.position + offset, acoConn.ToNode.transform.position);
+
+                /// Draw A* route between each ACOConnection
+                foreach (Connection routeConn in acoConn.Route)
+                {
+                    Gizmos.color = Color.cyan;
+                    Gizmos.DrawLine(routeConn.FromNode.transform.position + offset, routeConn.ToNode.transform.position + offset);
+                }
+            }
+        }
+    }
     #endregion
 
     private void NavigateStartToACO()
@@ -243,11 +288,9 @@ public class ACOTruck : MonoBehaviour
                 {
                     /// Finished all paths, reset and sleep
                     m_currentDrivePathTarget = NavigationTarget.None;
-                    //Debug.Log($"Agent '{this.name}' completed A* navigation from ACO to Start");
-
-                    ResetPath();
 
                     m_ui.SetStatusText("Finished and returned home. Sleeping (zzz)");
+                    ResetPath();
                 }
                 else
                 {
@@ -261,6 +304,10 @@ public class ACOTruck : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Generic function for navigating agent to a target node. Sets the direction and position
+    /// </summary>
+    /// <param name="targetNode">Target waypoint/node to move toward</param>
     private void NavigateGeneric(GameObject targetNode)
     {
         PerformLookAt(targetNode.transform);
@@ -294,8 +341,7 @@ public class ACOTruck : MonoBehaviour
         m_startToACOPath = startToACOAStarPath;
         m_acoToStartPath = acoToStartAStarPath;
 
-        Debug.Log($"Agent '{this.name}' path set!");
-
+        /// Set Move states to go from Start to the ACO start
         m_currentDrivePathTarget = NavigationTarget.StartToACO;
 
         /// Set movement vars to default values
@@ -306,7 +352,7 @@ public class ACOTruck : MonoBehaviour
         /// Set NavigateInfo for each A* path
         m_startToACONavInfo = new NavigateToInfo
         {
-            TargetNode = m_startToACOPath.FirstOrDefault().FromNode,
+            TargetNode = m_startToACOPath.FirstOrDefault().ToNode,
             TargetIndex = 0
         };
         m_acoToStartNavInfo = new NavigateToInfo
@@ -318,6 +364,7 @@ public class ACOTruck : MonoBehaviour
         /// Set start position for agent
         this.transform.position = startToACOAStarPath.FirstOrDefault().FromNode.transform.position;
 
+        Debug.Log($"Agent '{this.name}' path set! Start to ACO '{m_startToACOPath.Count}' Waypoints, ACO Total '{m_acoConnectionPath.Count}' waypoints, ACO to Start '{m_acoToStartPath.Count}' waypoints");
         m_ui.SetStatusText($"New Path: Moving to '{m_acoConnectionPath[m_acoConnectionPath.Count - 1].ToNode.name}'");
     }
 
@@ -366,26 +413,52 @@ public class ACOTruck : MonoBehaviour
     }
 
     /// <summary>
-    /// Pauses movement
+    /// Pauses movement of the agent
     /// </summary>
     public void PauseMovement()
     {
         if (!IsWaiting)
         {
-            m_ui.SetStatusText($"Waiting at '{m_acoConnectionPath[m_currentTargetACOConnIndex].FromNode.name}'");
+            string nodeName = "Unknown Node";
+            switch (m_currentDrivePathTarget)
+            {
+                case NavigationTarget.StartToACO:
+                    nodeName = m_startToACOPath[m_startToACONavInfo.TargetIndex].FromNode.name;
+                    break;
+                case NavigationTarget.ACO:
+                    nodeName = m_acoConnectionPath[m_currentTargetACOConnIndex].FromNode.name;
+                    break;
+                case NavigationTarget.ACOToStart:
+                    nodeName = m_acoToStartPath[m_acoToStartNavInfo.TargetIndex].FromNode.name;
+                    break;
+            }
+            m_ui.SetStatusText($"Waiting at '{nodeName}'");
         }
 
         IsWaiting = true;
     }
 
     /// <summary>
-    /// Resumes movement
+    /// Resumes movement of the agent
     /// </summary>
     public void ResumeMovement()
     {
         if (IsWaiting)
         {
-            m_ui.SetStatusText($"Resuming to '{m_acoConnectionPath[m_acoConnectionPath.Count - 1].ToNode.name}'");
+            string nodeName = "Unknown Node";
+            switch (m_currentDrivePathTarget)
+            {
+                case NavigationTarget.StartToACO:
+                    nodeName = m_startToACOPath[m_startToACONavInfo.TargetIndex].ToNode.name;
+                    break;
+                case NavigationTarget.ACO:
+                    nodeName = m_acoConnectionPath[m_currentTargetACOConnIndex].ToNode.name;
+                    break;
+                case NavigationTarget.ACOToStart:
+                    nodeName = m_acoToStartPath[m_acoToStartNavInfo.TargetIndex].ToNode.name;
+                    break;
+            }
+            m_ui.SetStatusText($"Resuming to '{nodeName}'");
         }
 
         IsWaiting = false;
@@ -409,6 +482,8 @@ public class ACOTruck : MonoBehaviour
         Cargo.RemovePackages(1);
 
         m_ui.SetCargoAmount(Cargo.PackageCount);
+        m_ui.SetStatusText("Delivered a parcel!");
+
         IsDelivering = false;
     }
 

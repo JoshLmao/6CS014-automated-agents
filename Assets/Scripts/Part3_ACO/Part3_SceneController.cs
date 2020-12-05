@@ -61,11 +61,6 @@ public class Part3_SceneController : ACOSceneController
     /// </summary>
     private Dictionary<ACOTruck, IConnection> m_currentTruckConnections = new Dictionary<ACOTruck, IConnection>();
 
-    /// <summary>
-    /// Path to draw in gizmos for debugging
-    /// </summary>
-    private List<ACOConnection> m_gizmoPath = null;
-
     #region MonoBehaviours
     protected override void Start()
     {
@@ -151,20 +146,6 @@ public class Part3_SceneController : ACOSceneController
             }
         }
     }
-
-    // Draws debug objects in the editor and during editor play (if option set).
-    void OnDrawGizmos()
-    {
-        if (m_gizmoPath != null && m_gizmoPath.Count > 0)
-        {
-            Vector3 offset = new Vector3(0, 0.3f, 0);
-            foreach (ACOConnection aConn in m_gizmoPath)
-            {
-                Gizmos.color = Color.white;
-                Gizmos.DrawLine(aConn.FromNode.transform.position + offset, aConn.ToNode.transform.position + offset);
-            }
-        }
-    }
     #endregion
 
     private void InitAgents()
@@ -214,9 +195,6 @@ public class Part3_SceneController : ACOSceneController
 
                 acoTruck.OnTravelNewConnection += OnTruckTravelNewConnection;
                 acoTruck.OnReachedGoal += OnAgentReachedACOGoal;
-
-                /// Set Gizmo path for highlighting in Editor
-                m_gizmoPath = goalACOConnections;
             }
             else
             {

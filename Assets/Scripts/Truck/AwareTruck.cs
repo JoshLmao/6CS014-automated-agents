@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -56,6 +57,7 @@ public class AwareTruck : MonoBehaviour
     [SerializeField]
     private Vector3 ModelRotationOffset = Vector3.zero;
 
+    private float m_totalDuration = 0f; 
 
     /// <summary>
     /// Amount of distance to target to consider the truck to be at it's destination
@@ -84,6 +86,8 @@ public class AwareTruck : MonoBehaviour
         {
             // Do target node look at if target is valid
             PerformLookAt(m_currentTargetNode.transform);
+
+            m_totalDuration += Time.deltaTime;
 
             if (!IsWaiting)
             {
@@ -119,7 +123,9 @@ public class AwareTruck : MonoBehaviour
                     Connection finalConnection = m_connectionDrivePath[m_connectionDrivePath.Count - 1];
                     OnReachedPathEnd?.Invoke(this, finalConnection.ToNode);
 
-                    m_ui.SetStatusText($"Finished path to '{finalConnection.ToNode.name}'");
+                    string infoStr = $"Finished path to '{finalConnection.ToNode.name}', duration of '{Math.Round(m_totalDuration, 2)}s'";
+                    m_ui.SetStatusText(infoStr);
+                    Debug.Log($"Agent '{this.gameObject.name}' " + infoStr);
                     
                     ResetPath();
                 }
@@ -218,6 +224,8 @@ public class AwareTruck : MonoBehaviour
         m_connectionDrivePath = null;
         m_currentTargetNode = null;
         m_currentTargetNodeIndex = 0;
+
+        m_totalDuration = 0f;
     }
 
     /// <summary>

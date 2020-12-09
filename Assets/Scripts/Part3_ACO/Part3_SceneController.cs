@@ -193,6 +193,7 @@ public class Part3_SceneController : ACOSceneController
                 /// Set this agent to move along ACO path
                 acoTruck.SetMovePath(startToACOStart, route, acoEndToStart);
 
+                /// Register to listen to events of trucks 
                 acoTruck.OnTravelNewConnection += OnTruckTravelNewConnection;
                 acoTruck.OnReachedGoal += OnAgentReachedACOGoal;
             }
@@ -259,20 +260,20 @@ public class Part3_SceneController : ACOSceneController
         return closest;
     }
 
-    private void OnTruckTravelNewConnection(ACOTruck truck, IConnection nextTravelConnection)
+    private void OnTruckTravelNewConnection(ACOTruck truck, IConnection targetTravelConnection)
     {
         // Update or add new connection to list
         if (m_currentTruckConnections.ContainsKey(truck))
         {
-            m_currentTruckConnections[truck] = nextTravelConnection;
+            m_currentTruckConnections[truck] = targetTravelConnection;
         }
         else
         {
-            m_currentTruckConnections.Add(truck, nextTravelConnection);
+            m_currentTruckConnections.Add(truck, targetTravelConnection);
         }
     }
 
-    private void OnAgentReachedACOGoal(ACOTruck agent, GameObject arg2)
+    private void OnAgentReachedACOGoal(ACOTruck agent, GameObject acoGoal)
     {
         agent.DeliverPackage();
     }

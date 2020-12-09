@@ -95,6 +95,8 @@ public class ACOTruck : MonoBehaviour
     [SerializeField]
     private Vector3 ModelRotationOffset = Vector3.zero;
 
+    private float m_totalDuration = 0f;
+
     /// <summary>
     /// Controller for UI to display how much is carrying in Cargo
     /// </summary>
@@ -134,6 +136,11 @@ public class ACOTruck : MonoBehaviour
                 break;
             default:
                 break;
+        }
+
+        if (m_currentDrivePathTarget != NavigationTarget.None)
+        {
+            m_totalDuration += Time.deltaTime;
         }
     }
 
@@ -234,8 +241,11 @@ public class ACOTruck : MonoBehaviour
                 {
                     /// Reached next route node, increment to next route node or to new ACOConnection
                     m_currentACOConnRouteIndex++;
+
+                    /// Check RouteIndex is within route bounds
                     if (m_currentACOConnRouteIndex >= m_currentTargetACOConn.Route.Count)
                     {
+                        /// If index is more than route, we've reached end and can move to next ACOConnection
                         m_currentACOConnRouteIndex = 0;
 
                         m_currentTargetACOConnIndex++;
@@ -254,6 +264,7 @@ public class ACOTruck : MonoBehaviour
                         }
                         else
                         {
+                            /// Move to next node in Route
                             //Debug.Log($"Reached ACO goal {m_currentTargetACOConn.ToNode.name}");
 
                             OnReachedGoal?.Invoke(this, m_currentTargetACOConn.ToNode);
@@ -264,6 +275,12 @@ public class ACOTruck : MonoBehaviour
                             OnTravelNewConnection?.Invoke(this, m_currentTargetACOConn);
                             return;
                         }
+                    }
+                    else
+                    {
+                        /// Still more Route nodes to travel to, invoke event to specify the connection
+                        Connection nextRouteConnection = m_currentTargetACOConn.Route[m_currentACOConnRouteIndex];
+                        OnTravelNewConnection?.Invoke(this, nextRouteConnection);
                     }
                 }
             }
@@ -290,6 +307,8 @@ public class ACOTruck : MonoBehaviour
                     m_currentDrivePathTarget = NavigationTarget.None;
 
                     m_ui.SetStatusText("Finished and returned home. Sleeping (zzz)");
+                    Debug.Log($"Agent '{this.gameObject.name}' finished ACO path, duration of '{m_totalDuration}s'");
+
                     ResetPath();
                 }
                 else
@@ -500,5 +519,6 @@ public class ACOTruck : MonoBehaviour
         m_startToACONavInfo = null;
         m_acoToStartPath = null;
         m_acoToStartNavInfo = null;
+        m_totalDuration = 0f;
     }
 }

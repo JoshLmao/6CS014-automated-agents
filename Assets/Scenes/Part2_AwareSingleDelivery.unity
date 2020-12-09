@@ -5140,7 +5140,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 11687ec68d5eeb94b8e6ee958772373d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_environmentSceneName: Environment
+  m_environmentSceneName: CityEnvironment
 --- !u!4 &1120504673
 Transform:
   m_ObjectHideFlags: 0

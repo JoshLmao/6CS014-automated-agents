@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 3091525475324817844}
   - component: {fileID: 6565971668796323238}
   m_Layer: 0
-  m_Name: ACO Purple Truck 1
+  m_Name: ACO Purple Truck
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -44,8 +44,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d9cfd9ee8c9fe8b48ba128e651d64b44, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  MaxSpeed: 20
+  MaxSpeed: 30
   IsWaiting: 0
+  IsDelivering: 0
   ModelRotationOffset: {x: 0, y: 90, z: 0}
 --- !u!1001 &1918155340861426455
 PrefabInstance:
